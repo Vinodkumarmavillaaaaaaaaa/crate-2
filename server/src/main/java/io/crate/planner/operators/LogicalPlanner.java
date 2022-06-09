@@ -28,11 +28,16 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+import io.crate.analyze.AnalyzedDeclareCursor;
+import io.crate.metadata.RelationName;
+import io.crate.planner.node.fetch.FetchSource;
 import org.elasticsearch.Version;
 
 import io.crate.analyze.AnalyzedInsertStatement;
@@ -562,6 +567,22 @@ public class LogicalPlanner {
                     subqueryPlanner),
                 tableStats,
                 context.transactionContext()
+            );
+        }
+
+        @Override
+        public LogicalPlan visitDeclareCursor(AnalyzedDeclareCursor declareCursor,
+                                              PlannerContext context) {
+            var query = declareCursor.getQuery().accept(this, context);
+            FetchRewrite fetchRewrite = query.sources().get(0).rewriteToFetch(tableStats, List.of());
+
+            List<Reference> fetchRefs = fetchRewrite.extractFetchRefs();
+            Map<RelationName, FetchSource> fetchSourceByRelation = fetchRewrite.createFetchSources();
+            return new Fetch(
+                fetchRewrite.replacedOutputs(),
+                fetchRefs,
+                fetchSourceByRelation,
+                fetchRewrite.newPlan()
             );
         }
     }

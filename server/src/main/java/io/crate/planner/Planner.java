@@ -42,6 +42,7 @@ import io.crate.analyze.AnalyzedCreateTable;
 import io.crate.analyze.AnalyzedCreateTableAs;
 import io.crate.analyze.AnalyzedCreateUser;
 import io.crate.analyze.AnalyzedDeallocate;
+import io.crate.analyze.AnalyzedDeclareCursor;
 import io.crate.analyze.AnalyzedDecommissionNode;
 import io.crate.analyze.AnalyzedDeleteStatement;
 import io.crate.analyze.AnalyzedDiscard;
@@ -571,6 +572,12 @@ public class Planner extends AnalyzedStatementVisitor<PlannerContext, Plan> {
     public Plan visitDropSubscription(AnalyzedDropSubscription dropSubscription,
                                       PlannerContext context) {
         return new DropSubscriptionPlan(dropSubscription);
+    }
+
+    @Override
+    public Plan visitDeclareCursor(AnalyzedDeclareCursor declareCursor,
+                                   PlannerContext context) {
+        return logicalPlanner.plan(declareCursor, context);
     }
 }
 
