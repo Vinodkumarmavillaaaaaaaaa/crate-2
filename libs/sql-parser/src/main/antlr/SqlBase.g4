@@ -90,6 +90,7 @@ statement
     | ANALYZE                                                                        #analyze
     | DISCARD (ALL | PLANS | SEQUENCES | TEMPORARY | TEMP)                           #discard
     | DECLARE ident CURSOR ((WITH | WITHOUT) HOLD)? FOR queryNoWith                  #declareCursor
+    | FETCH (direction (FROM | IN)?)? ident                                          #fetchFromCursor
     ;
 
 dropStmt
@@ -726,6 +727,10 @@ isolationLevel
     | READ UNCOMMITTED
     ;
 
+direction
+    : FORWARD (integerLiteral | ALL)?
+    ;
+
 nonReserved
     : ALIAS | ANALYZE | ANALYZER | AT | AUTHORIZATION | BERNOULLI | BLOB | CATALOGS | CHAR_FILTERS | CHECK | CLUSTERED
     | COLUMNS | COPY | CURRENT |  DAY | DEALLOCATE | DISTRIBUTED | DUPLICATE | DYNAMIC | EXPLAIN
@@ -745,7 +750,7 @@ nonReserved
     | REPLACE | RETURNING | SWAP | GC | DANGLING | ARTIFACTS | DECOMMISSION | LEADING | TRAILING | BOTH | TRIM
     | CURRENT_SCHEMA | PROMOTE | CHARACTER | VARYING
     | DISCARD | PLANS | SEQUENCES | TEMPORARY | TEMP | METADATA
-    | PUBLICATION | SUBSCRIPTION | ENABLE | DISABLE | CONNECTION | DECLARE | CURSOR | HOLD
+    | PUBLICATION | SUBSCRIPTION | ENABLE | DISABLE | CONNECTION | DECLARE | CURSOR | HOLD | FETCH | FORWARD
     ;
 
 AUTHORIZATION: 'AUTHORIZATION';
@@ -1027,6 +1032,8 @@ DISABLE: 'DISABLE';
 DECLARE: 'DECLARE';
 CURSOR: 'CURSOR';
 HOLD: 'HOLD';
+FETCH: 'FETCH';
+FORWARD: 'FORWARD';
 
 EQ  : '=';
 NEQ : '<>' | '!=';

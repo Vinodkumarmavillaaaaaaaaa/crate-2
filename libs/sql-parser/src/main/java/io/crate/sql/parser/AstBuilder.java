@@ -2037,6 +2037,11 @@ class AstBuilder extends SqlBaseBaseVisitor<Node> {
         return new DeclareCursor(getIdentText(ctx.ident()), (Query) visit(ctx.queryNoWith()));
     }
 
+    @Override
+    public Node visitFetchFromCursor(SqlBaseParser.FetchFromCursorContext ctx) {
+        return super.visitFetchFromCursor(ctx);
+    }
+
     private static String getObjectType(Token type) {
         if (type == null) return null;
         switch (type.getType()) {
