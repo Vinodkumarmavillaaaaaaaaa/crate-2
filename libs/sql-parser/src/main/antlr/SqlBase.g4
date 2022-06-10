@@ -89,7 +89,7 @@ statement
     | DEALLOCATE (PREPARE)? (ALL | prepStmt=stringLiteralOrIdentifierOrQname)        #deallocate
     | ANALYZE                                                                        #analyze
     | DISCARD (ALL | PLANS | SEQUENCES | TEMPORARY | TEMP)                           #discard
-    | DECLARE ident CURSOR ((WITH | WITHOUT) HOLD)? FOR query                        #declareCursor
+    | DECLARE ident CURSOR ((WITH | WITHOUT) HOLD)? FOR queryNoWith                  #declareCursor
     ;
 
 dropStmt
