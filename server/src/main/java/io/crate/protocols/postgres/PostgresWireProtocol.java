@@ -776,7 +776,7 @@ public class PostgresWireProtocol {
             CompletableFuture<?> execute;
             if (fields == null) {
                 RowCountReceiver rowCountReceiver = new RowCountReceiver(query, channel.bypassDelay(), accessControl);
-                execute = session.execute(portalNameCapture[0], 0, rowCountReceiver);
+                execute = session.execute(portalNameCapture[0], portalNameCapture.length > 0 ? 1 : 0, rowCountReceiver);
             } else {
                 Messages.sendRowDescription(channel, fields, null, describeResult.relation());
                 ResultSetReceiver resultSetReceiver = new ResultSetReceiver(

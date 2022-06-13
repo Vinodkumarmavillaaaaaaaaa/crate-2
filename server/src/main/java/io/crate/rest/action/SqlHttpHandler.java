@@ -257,7 +257,7 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             );
             resultReceiver.completionFuture().whenComplete((result, error) -> ramAccounting.close());
         }
-        session.execute(portalNameCapture[0], 0, resultReceiver);
+        session.execute(portalNameCapture[0], portalNameCapture.length > 0 ? 1 : 0, resultReceiver);
         return session.sync()
             .thenCompose(ignored -> resultReceiver.completionFuture());
     }
