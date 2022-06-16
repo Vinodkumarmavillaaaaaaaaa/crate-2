@@ -6,7 +6,7 @@
  * you may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -19,33 +19,32 @@
  * software solely pursuant to the terms of the relevant commercial agreement.
  */
 
-package io.crate.expression.tablefunctions;
+package io.crate.common.resolvers;
 
-import io.crate.data.Row;
-import io.crate.data.RowN;
-import org.junit.Test;
+import io.crate.sql.tree.AstVisitor;
+import io.crate.sql.tree.DeclareCursor;
+import io.crate.sql.tree.FetchFromCursor;
+import io.crate.sql.tree.Node;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+public class PortalNameResolver extends AstVisitor<String, String> {
 
-import static org.hamcrest.Matchers.is;
+    public static final PortalNameResolver INSTANCE = new PortalNameResolver();
 
-public class PgGetKeywordsFunctionTest extends AbstractTableFunctionsTest {
+    private PortalNameResolver() {
+    }
 
-    @Test
-    public void test_pg_get_keywords() {
-        var it = execute("pg_catalog.pg_get_keywords()").iterator();
-        List<Row> rows = new ArrayList<>();
-        while (it.hasNext()) {
-            rows.add(new RowN(it.next().materialize()));
-        }
-        rows.sort(Comparator.comparing(x -> ((String) x.get(0))));
-        assertThat(rows.size(), is(259));
-        Row row = rows.get(0);
+    @Override
+    protected String visitNode(Node node, String defaultName) {
+        return defaultName;
+    }
 
-        assertThat(row.get(0), is("add"));
-        assertThat(row.get(1), is("R"));
-        assertThat(row.get(2), is("reserved"));
+    @Override
+    public String visitDeclareCursor(DeclareCursor declareCursor, String defaultName) {
+        return declareCursor.getCursorName();
+    }
+
+    @Override
+    public String visitFetchFromCursor(FetchFromCursor fetchFromCursor, String defaultName) {
+        return fetchFromCursor.getCursorName();
     }
 }

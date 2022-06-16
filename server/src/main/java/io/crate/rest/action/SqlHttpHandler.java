@@ -31,6 +31,8 @@ import io.crate.action.sql.parser.SQLRequestParser;
 import io.crate.auth.AuthSettings;
 import io.crate.auth.AccessControl;
 import io.crate.common.annotations.VisibleForTesting;
+import io.crate.common.resolvers.MaxRowsResolver;
+import io.crate.common.resolvers.PortalNameResolver;
 import io.crate.sql.tree.Statement;
 import io.crate.user.User;
 import io.crate.user.UserLookup;
@@ -234,7 +236,8 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                                                                     boolean includeTypes) throws IOException {
         long startTimeInNs = System.nanoTime();
         Statement parsedStmt = session.parse(UNNAMED, stmt, emptyList());
-        String portalName = session.extractPortalFromQuery(parsedStmt);
+        String portalName = parsedStmt.accept(PortalNameResolver.INSTANCE, "");
+        int maxRows = parsedStmt.accept(MaxRowsResolver.INSTANCE, 0);
         session.bind(portalName, UNNAMED, args == null ? emptyList() : args, null);
         DescribeResult description = session.describe('P', portalName);
         List<Symbol> resultFields = description.getFields();
@@ -258,7 +261,7 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             );
             resultReceiver.completionFuture().whenComplete((result, error) -> ramAccounting.close());
         }
-        session.execute(portalName, 0, resultReceiver);
+        session.execute(portalName, maxRows, resultReceiver);
         return session.sync()
             .thenCompose(ignored -> resultReceiver.completionFuture());
     }
@@ -268,12 +271,13 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                                                                   List<List<Object>> bulkArgs) {
         final long startTimeInNs = System.nanoTime();
         Statement parsedStmt = session.parse(UNNAMED, stmt, emptyList());
-        String portalName = session.extractPortalFromQuery(parsedStmt);
+        String portalName = parsedStmt.accept(PortalNameResolver.INSTANCE, "");
+        int maxRows = parsedStmt.accept(MaxRowsResolver.INSTANCE, 0);
         final RestBulkRowCountReceiver.Result[] results = new RestBulkRowCountReceiver.Result[bulkArgs.size()];
         for (int i = 0; i < bulkArgs.size(); i++) {
             session.bind(portalName, UNNAMED, bulkArgs.get(i), null);
             ResultReceiver resultReceiver = new RestBulkRowCountReceiver(results, i);
-            session.execute(portalName, 0, resultReceiver);
+            session.execute(portalName, maxRows, resultReceiver);
         }
         if (results.length > 0) {
             DescribeResult describeResult = session.describe('P', portalName);

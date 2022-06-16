@@ -60,6 +60,8 @@ import io.crate.auth.AuthenticationMethod;
 import io.crate.auth.Protocol;
 import io.crate.common.annotations.VisibleForTesting;
 import io.crate.common.collections.Lists2;
+import io.crate.common.resolvers.MaxRowsResolver;
+import io.crate.common.resolvers.PortalNameResolver;
 import io.crate.expression.symbol.Symbol;
 import io.crate.protocols.postgres.types.PGType;
 import io.crate.protocols.postgres.types.PGTypes;
@@ -766,7 +768,8 @@ public class PostgresWireProtocol {
             query = statement.toString();
         }
         AccessControl accessControl = getAccessControl.apply(session.sessionContext());
-        String portalName = session.extractPortalFromQuery(statement);
+        String portalName = statement.accept(PortalNameResolver.INSTANCE, "");
+        int maxRows = statement.accept(MaxRowsResolver.INSTANCE, 0);
         try {
             session.analyze("", statement, Collections.emptyList(), query);
             session.bind(portalName, "", Collections.emptyList(), null);
@@ -776,7 +779,7 @@ public class PostgresWireProtocol {
             CompletableFuture<?> execute;
             if (fields == null) {
                 RowCountReceiver rowCountReceiver = new RowCountReceiver(query, channel.bypassDelay(), accessControl);
-                execute = session.execute(portalName, 0, rowCountReceiver);
+                execute = session.execute(portalName, maxRows, rowCountReceiver);
             } else {
                 Messages.sendRowDescription(channel, fields, null, describeResult.relation());
                 ResultSetReceiver resultSetReceiver = new ResultSetReceiver(
@@ -787,7 +790,7 @@ public class PostgresWireProtocol {
                     Lists2.map(fields, x -> PGTypes.get(x.valueType())),
                     null
                 );
-                execute = session.execute(portalName, 0, resultSetReceiver);
+                execute = session.execute(portalName, maxRows, resultSetReceiver);
             }
             if (execute != null) {
                 channel.delayWritesUntil(execute);

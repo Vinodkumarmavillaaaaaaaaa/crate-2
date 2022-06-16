@@ -79,7 +79,6 @@ import io.crate.protocols.postgres.Portals;
 import io.crate.protocols.postgres.RetryOnFailureResultReceiver;
 import io.crate.protocols.postgres.TransactionState;
 import io.crate.sql.parser.SqlParser;
-import io.crate.sql.tree.Cursor;
 import io.crate.sql.tree.DiscardStatement.Target;
 import io.crate.sql.tree.Statement;
 import io.crate.types.DataType;
@@ -298,7 +297,9 @@ public class Session implements AutoCloseable {
             throw t;
         }
 
-        preparedStatements.put(statementName, new PreparedStmt(statement, analyzedStatement, query, parameterTypes));
+        preparedStatements.put(
+            statementName,
+            new PreparedStmt(statement, analyzedStatement, query, parameterTypes));
     }
 
     public void bind(String portalName,
@@ -390,9 +391,6 @@ public class Session implements AutoCloseable {
     @Nullable
     public CompletableFuture<?> execute(String portalName, int maxRows, ResultReceiver<?> resultReceiver) {
         Portal portal = portals.getSafePortal(portalName);
-        if (maxRows == 0) {
-            maxRows = portals.tryGetMaxRows(portal);
-        }
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("method=execute portalName={} maxRows={}", portalName, maxRows);
         }
@@ -440,10 +438,9 @@ public class Session implements AutoCloseable {
              *          preparedStatement.execute(args)
              *      conn.commit()
              */
-            int finalMaxRows = maxRows;
             deferredExecutionsByStmt.compute(
                 portal.preparedStmt().parsedStatement(), (key, oldValue) -> {
-                    DeferredExecution deferredExecution = new DeferredExecution(portal, finalMaxRows, resultReceiver);
+                    DeferredExecution deferredExecution = new DeferredExecution(portal, maxRows, resultReceiver);
                     if (oldValue == null) {
                         ArrayList<DeferredExecution> deferredExecutions = new ArrayList<>();
                         deferredExecutions.add(deferredExecution);
@@ -463,9 +460,8 @@ public class Session implements AutoCloseable {
             if (activeExecution == null) {
                 activeExecution = singleExec(portal, resultReceiver, maxRows);
             } else {
-                int finalMaxRows = maxRows;
                 activeExecution = activeExecution
-                    .thenCompose(ignored -> singleExec(portal, resultReceiver, finalMaxRows));
+                    .thenCompose(ignored -> singleExec(portal, resultReceiver, maxRows));
             }
             return activeExecution;
         }
@@ -618,11 +614,7 @@ public class Session implements AutoCloseable {
             if (portal.jobID() != null) {
                 jobsLogs.replaceStmt(portal.jobID(), portal.preparedStmt().rawStatement());
             }
-            if (portal instanceof io.crate.protocols.postgres.Cursor) {
-                activeConsumer.resume(0);
-            } else {
-                activeConsumer.resume();
-            }
+            activeConsumer.resume();
             return resultReceiver.completionFuture();
         }
 
@@ -795,12 +787,5 @@ public class Session implements AutoCloseable {
     @Nullable
     public java.util.UUID getMostRecentJobID() {
         return mostRecentJobID;
-    }
-
-    public String extractPortalFromQuery(Statement statement) {
-        if (statement instanceof Cursor cursor) {
-            return cursor.getCursorName();
-        }
-        return "";
     }
 }

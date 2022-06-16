@@ -79,16 +79,6 @@ public class Portals {
         }
     }
 
-    public int tryGetMaxRows(Portal portal) {
-        var stmt = portal.analyzedStatement();
-        if (stmt instanceof AnalyzedFetchFromCursor analyzedFetchFromCursor) {
-            return analyzedFetchFromCursor.count();
-        } else if (stmt instanceof AnalyzedDeclareCursor) {
-            return 1;
-        }
-        return 0;
-    }
-
     public Portal remove(String name) {
         return portals.remove(name);
     }

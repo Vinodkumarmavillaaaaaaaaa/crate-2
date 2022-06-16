@@ -61,9 +61,15 @@ public class Cursor extends Portal {
         this.paramsOfFetch = params;
         this.resultFormatCodesOfFetch = resultFormatCodes;
 
+        var activeConsumer = this.activeConsumer();
         // equivalent to 'if this is the first time binding a fetch stmt to this cursor'
-        if (RowConsumerToResultReceiver.SUSPENDED.equals(this.activeConsumer())) {
+        if (RowConsumerToResultReceiver.SUSPENDED.equals(activeConsumer)) {
             this.setActiveConsumer(null);
+        } else if (activeConsumer != null) {
+            // equivalent to 'if this fetch is not the first fetch to be bounded to this cursor'
+            // ex) fetch x from cursor; fetch y from cursor;
+            // if rowCount is not reset, y is affected by x because the consumer is reused
+            activeConsumer.resetRowCount(0);
         }
     }
 
