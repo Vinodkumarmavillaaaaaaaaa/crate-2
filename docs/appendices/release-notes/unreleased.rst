@@ -116,6 +116,8 @@ Changes
 
 - Updated Admin UI to 1.22.0, including an update with the new logo and colors.
 
+- Added ``datestyle`` session setting. Setting ``datestyle`` will be ignored.
+
 Fixes
 =====
 

@@ -36,9 +36,13 @@ import io.crate.action.sql.SessionContext;
 import io.crate.metadata.SearchPath;
 import io.crate.protocols.postgres.PostgresWireProtocol;
 import io.crate.types.DataTypes;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Singleton
 public class SessionSettingRegistry {
+
+    private static final Logger LOGGER = LogManager.getLogger(SessionSettingRegistry.class);
 
     private static final String SEARCH_PATH_KEY = "search_path";
     public static final String HASH_JOIN_KEY = "enable_hashjoin";
@@ -46,6 +50,7 @@ public class SessionSettingRegistry {
     private static final String SERVER_VERSION_NUM = "server_version_num";
     private static final String SERVER_VERSION = "server_version";
     static final String ERROR_ON_UNKNOWN_OBJECT_KEY = "error_on_unknown_object_key";
+    static final String DATE_STYLE_KEY = "datestyle";
     private final Map<String, SessionSetting<?>> settings;
 
     @Inject
@@ -128,7 +133,22 @@ public class SessionSettingRegistry {
                      s -> Boolean.toString(s.errorOnUnknownObjectKey()),
                      () -> String.valueOf(true),
                      "Raises or suppresses ObjectKeyUnknownException when querying nonexistent keys to dynamic objects.",
-                     DataTypes.BOOLEAN));
+                     DataTypes.BOOLEAN))
+            .put(DATE_STYLE_KEY,
+                 new SessionSetting<>(
+                     DATE_STYLE_KEY,
+                     objects -> {},
+                     Function.identity(),
+                     (s,v) -> {
+                         LOGGER.info("SET SESSION STATEMENT WILL BE IGNORED: {}", DATE_STYLE_KEY);
+                     },
+                     s -> String.valueOf(PostgresWireProtocol.DATE_STYLE),
+                     () -> String.valueOf(PostgresWireProtocol.DATE_STYLE),
+                     "Display format for date and time values.",
+                     DataTypes.STRING
+                )
+            );
+
 
         for (var providers : sessionSettingProviders) {
             for (var setting : providers.sessionSettings()) {
