@@ -21,21 +21,27 @@
 
 package io.crate.analyze;
 
-import io.crate.expression.symbol.Symbol;
-import io.crate.protocols.postgres.Portal;
-
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class AnalyzedFetchFromCursor implements AnalyzedStatement {
+import javax.annotation.Nullable;
+
+import io.crate.expression.symbol.Symbol;
+
+public class AnalyzedFetchFromCursor extends AnalyzedCursor {
 
     private final int count;
-    private final AnalyzedStatement analyzedDeclareCursor;
 
-    public AnalyzedFetchFromCursor(int count, Portal portal) {
+    public static AnalyzedFetchFromCursor safeCreate(int count, AnalyzedStatement analyzedStatement) {
+        if (analyzedStatement instanceof AnalyzedCursor analyzedCursor) {
+            return new AnalyzedFetchFromCursor(count, analyzedCursor);
+        }
+        throw new IllegalArgumentException("FetchFromCursor cannot be created");
+    }
+
+    private AnalyzedFetchFromCursor(int count, AnalyzedCursor analyzedCursor) {
+        super(analyzedCursor.cursorName(), analyzedCursor.query());
         this.count = count;
-        this.analyzedDeclareCursor = portal.analyzedStatement();
     }
 
     public int count() {
@@ -44,7 +50,7 @@ public class AnalyzedFetchFromCursor implements AnalyzedStatement {
 
     @Override
     public <C, R> R accept(AnalyzedStatementVisitor<C, R> analyzedStatementVisitor, C context) {
-        return null;
+        return analyzedStatementVisitor.visitFetchFromCursor(this, context);
     }
 
     @Override
@@ -60,6 +66,6 @@ public class AnalyzedFetchFromCursor implements AnalyzedStatement {
     @Nullable
     @Override
     public List<Symbol> outputs() {
-        return analyzedDeclareCursor.outputs();
+        return query().outputs();
     }
 }

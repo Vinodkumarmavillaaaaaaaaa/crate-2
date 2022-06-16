@@ -22,36 +22,22 @@
 package io.crate.analyze;
 
 import io.crate.analyze.relations.AnalyzedRelation;
-import io.crate.expression.symbol.Symbol;
 
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.function.Consumer;
+public abstract class AnalyzedCursor implements AnalyzedStatement {
 
-public class AnalyzedDeclareCursor extends AnalyzedCursor {
+    private final String cursorName;
+    private final AnalyzedRelation query;
 
-    public AnalyzedDeclareCursor(String cursorName, AnalyzedRelation query) {
-        super(cursorName, query);
+    public AnalyzedCursor(String cursorName, AnalyzedRelation query) {
+        this.cursorName = cursorName;
+        this.query = query;
     }
 
-    @Override
-    public <C, R> R accept(AnalyzedStatementVisitor<C, R> analyzedStatementVisitor, C context) {
-        return null;
+    public String cursorName() {
+        return cursorName;
     }
 
-    @Nullable
-    @Override
-    public List<Symbol> outputs() {
-        return null;
-    }
-
-    @Override
-    public boolean isWriteOperation() {
-        return false;
-    }
-
-    @Override
-    public void visitSymbols(Consumer<? super Symbol> consumer) {
-
+    public AnalyzedRelation query() {
+        return query;
     }
 }

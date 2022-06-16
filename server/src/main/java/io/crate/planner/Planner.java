@@ -42,7 +42,6 @@ import io.crate.analyze.AnalyzedCreateTable;
 import io.crate.analyze.AnalyzedCreateTableAs;
 import io.crate.analyze.AnalyzedCreateUser;
 import io.crate.analyze.AnalyzedDeallocate;
-import io.crate.analyze.AnalyzedDeclareCursor;
 import io.crate.analyze.AnalyzedDecommissionNode;
 import io.crate.analyze.AnalyzedDeleteStatement;
 import io.crate.analyze.AnalyzedDiscard;
@@ -53,6 +52,7 @@ import io.crate.analyze.AnalyzedDropSnapshot;
 import io.crate.analyze.AnalyzedDropTable;
 import io.crate.analyze.AnalyzedDropUser;
 import io.crate.analyze.AnalyzedDropView;
+import io.crate.analyze.AnalyzedFetchFromCursor;
 import io.crate.analyze.AnalyzedGCDanglingArtifacts;
 import io.crate.analyze.AnalyzedInsertStatement;
 import io.crate.analyze.AnalyzedKill;
@@ -575,9 +575,9 @@ public class Planner extends AnalyzedStatementVisitor<PlannerContext, Plan> {
     }
 
     @Override
-    public Plan visitDeclareCursor(AnalyzedDeclareCursor declareCursor,
-                                   PlannerContext context) {
-        return logicalPlanner.plan(declareCursor, context);
+    public Plan visitFetchFromCursor(AnalyzedFetchFromCursor fetchFromCursor,
+                                     PlannerContext context) {
+        return logicalPlanner.plan(fetchFromCursor, context);
     }
 }
 

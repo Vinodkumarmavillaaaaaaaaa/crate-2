@@ -34,7 +34,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import io.crate.analyze.AnalyzedDeclareCursor;
+import io.crate.analyze.AnalyzedFetchFromCursor;
 import io.crate.metadata.RelationName;
 import io.crate.planner.node.fetch.FetchSource;
 import org.elasticsearch.Version;
@@ -570,9 +570,9 @@ public class LogicalPlanner {
         }
 
         @Override
-        public LogicalPlan visitDeclareCursor(AnalyzedDeclareCursor declareCursor,
-                                              PlannerContext context) {
-            var query = declareCursor.getQuery().accept(this, context);
+        public LogicalPlan visitFetchFromCursor(AnalyzedFetchFromCursor fetchFromCursor,
+                                                PlannerContext context) {
+            var query = fetchFromCursor.query().accept(this, context);
             FetchRewrite fetchRewrite = query.sources().get(0).rewriteToFetch(tableStats, List.of());
 
             List<Reference> fetchRefs = fetchRewrite.extractFetchRefs();

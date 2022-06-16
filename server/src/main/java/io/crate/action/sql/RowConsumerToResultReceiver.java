@@ -26,11 +26,58 @@ import io.crate.data.Row;
 import io.crate.data.RowConsumer;
 import io.crate.exceptions.SQLExceptions;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 public class RowConsumerToResultReceiver implements RowConsumer {
+
+    public static final RowConsumerToResultReceiver SUSPENDED = new RowConsumerToResultReceiver(
+        new ResultReceiver() {
+            @Override
+            public void setNextRow(Row row) {
+
+            }
+
+            @Override
+            public void batchFinished() {
+
+            }
+
+            @Override
+            public void allFinished(boolean interrupted) {
+
+            }
+
+            @Override
+            public void fail(@Nonnull Throwable t) {
+
+            }
+
+            @Override
+            public CompletableFuture completionFuture() {
+                return CompletableFuture.completedFuture(null);
+            }
+        },
+        0,
+        t -> {}
+    ) {
+        @Override
+        public boolean suspended() {
+            return true;
+        }
+
+        @Override
+        public void resume() {
+
+        }
+
+        @Override
+        public void replaceResultReceiver(ResultReceiver resultReceiver, int maxRows) {
+            resultReceiver.allFinished(false);
+        }
+    };
 
     private final CompletableFuture<?> completionFuture = new CompletableFuture<>();
     private ResultReceiver resultReceiver;
@@ -112,7 +159,7 @@ public class RowConsumerToResultReceiver implements RowConsumer {
     }
 
     public boolean suspended() {
-        return activeIt != null || maxRows == -1;
+        return activeIt != null;
     }
 
     public void replaceResultReceiver(ResultReceiver resultReceiver, int maxRows) {
@@ -129,6 +176,11 @@ public class RowConsumerToResultReceiver implements RowConsumer {
         BatchIterator<Row> iterator = this.activeIt;
         this.activeIt = null;
         consumeIt(iterator);
+    }
+
+    public void resume(int rowCount) {
+        this.rowCount = rowCount;
+        resume();
     }
 
     @Override

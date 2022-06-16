@@ -93,7 +93,7 @@ public class NodeFetchRequest extends NodeRequest<NodeFetchRequest.FetchRequest>
         }
 
         public boolean isCloseContext() {
-            return false;
+            return closeContext;
         }
 
         @Nullable

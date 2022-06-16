@@ -284,10 +284,6 @@ public class AnalyzedStatementVisitor<C, R> {
         return visitDDLStatement(alterSubscription, context);
     }
 
-    public R visitDeclareCursor(AnalyzedDeclareCursor declareCursor, C context) {
-        return visitAnalyzedStatement(declareCursor, context);
-    }
-
     public R visitFetchFromCursor(AnalyzedFetchFromCursor fetchFromCursor, C context) {
         return visitAnalyzedStatement(fetchFromCursor, context);
     }

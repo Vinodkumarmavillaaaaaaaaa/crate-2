@@ -701,7 +701,7 @@ public class Analyzer {
             if (context.portals() != null) {
                 Portal portal = context.portals().get(fetchFromCursor.getCursorName());
                 if (portal != null) {
-                    return new AnalyzedFetchFromCursor(fetchFromCursor.count(), portal);
+                    return AnalyzedFetchFromCursor.safeCreate(fetchFromCursor.count(), portal.analyzedStatement());
                 }
             }
             throw new IllegalArgumentException("Cursor named \"" + fetchFromCursor.getCursorName() + "\" has not been declared.");

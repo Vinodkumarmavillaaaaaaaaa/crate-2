@@ -26,6 +26,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import io.crate.action.sql.PreparedStmt;
+import io.crate.action.sql.RowConsumerToResultReceiver;
 import io.crate.analyze.AnalyzedStatement;
 
 public class Cursor extends Portal {
@@ -41,6 +42,7 @@ public class Cursor extends Portal {
                                  @Nullable FormatCodes.FormatCode[] resultFormatCodes) {
         var c = new Cursor(portalName, preparedStmt, params, analyzedStatement, resultFormatCodes);
         c.bindFetch(preparedStmt, params, resultFormatCodes);
+        c.setActiveConsumer(RowConsumerToResultReceiver.SUSPENDED);
         return c;
     }
 
@@ -58,11 +60,21 @@ public class Cursor extends Portal {
         this.pStmtOfFetch = preparedStmt;
         this.paramsOfFetch = params;
         this.resultFormatCodesOfFetch = resultFormatCodes;
+
+        // equivalent to 'if this is the first time binding a fetch stmt to this cursor'
+        if (RowConsumerToResultReceiver.SUSPENDED.equals(this.activeConsumer())) {
+            this.setActiveConsumer(null);
+        }
     }
 
     @Override
     public PreparedStmt preparedStmt() {
         return pStmtOfFetch;
+    }
+
+    @Override
+    public AnalyzedStatement analyzedStatement() {
+        return pStmtOfFetch.analyzedStatement();
     }
 
     public void close() {
