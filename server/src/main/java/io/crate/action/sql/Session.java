@@ -33,7 +33,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import io.crate.analyze.AnalyzedDeclareCursor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.cluster.ClusterState;
@@ -76,10 +75,14 @@ import io.crate.planner.operators.SubQueryResults;
 import io.crate.protocols.postgres.FormatCodes;
 import io.crate.protocols.postgres.JobsLogsUpdateListener;
 import io.crate.protocols.postgres.Portal;
+import io.crate.protocols.postgres.Portals;
 import io.crate.protocols.postgres.RetryOnFailureResultReceiver;
 import io.crate.protocols.postgres.TransactionState;
 import io.crate.sql.parser.SqlParser;
+import io.crate.sql.tree.Cursor;
+import io.crate.sql.tree.DeclareCursor;
 import io.crate.sql.tree.DiscardStatement.Target;
+import io.crate.sql.tree.FetchFromCursor;
 import io.crate.sql.tree.Statement;
 import io.crate.types.DataType;
 
@@ -126,7 +129,7 @@ public class Session implements AutoCloseable {
     @VisibleForTesting
     final Map<String, PreparedStmt> preparedStatements = new HashMap<>();
     @VisibleForTesting
-    final Map<String, Portal> portals = new HashMap<>();
+    final Portals portals = new Portals();
 
     @VisibleForTesting
     final Map<Statement, List<DeferredExecution>> deferredExecutionsByStmt = new LinkedHashMap<>();
@@ -180,7 +183,7 @@ public class Session implements AutoCloseable {
     public void quickExec(String statement, Function<String, Statement> parse, ResultReceiver<?> resultReceiver, Row params) {
         CoordinatorTxnCtx txnCtx = new CoordinatorTxnCtx(sessionContext);
         Statement parsedStmt = parse.apply(statement);
-        AnalyzedStatement analyzedStatement = analyzer.analyze(parsedStmt, sessionContext, ParamTypeHints.EMPTY);
+        AnalyzedStatement analyzedStatement = analyzer.analyze(parsedStmt, sessionContext, portals, ParamTypeHints.EMPTY);
         RoutingProvider routingProvider = new RoutingProvider(Randomness.get().nextInt(), planner.getAwarenessAttributes());
         mostRecentJobID = UUIDs.dirtyUUID();
         ClusterState clusterState = planner.currentClusterState();
@@ -248,19 +251,11 @@ public class Session implements AutoCloseable {
         plan.execute(executor, plannerContext, consumer, params, SubQueryResults.EMPTY);
     }
 
-    private Portal getSafePortal(String portalName) {
-        Portal portal = portals.get(portalName);
-        if (portal == null) {
-            throw new IllegalArgumentException("Cannot find portal: " + portalName);
-        }
-        return portal;
-    }
-
     public SessionContext sessionContext() {
         return sessionContext;
     }
 
-    public void parse(String statementName, String[] portalNameCapture, String query, List<DataType> paramTypes) {
+    public Statement parse(String statementName, String query, List<DataType> paramTypes) {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("method=parse stmtName={} query={} paramTypes={}", statementName, query, paramTypes);
         }
@@ -276,11 +271,11 @@ public class Session implements AutoCloseable {
                 throw t;
             }
         }
-        analyze(statementName, portalNameCapture, statement, paramTypes, query);
+        analyze(statementName, statement, paramTypes, query);
+        return statement;
     }
 
     public void analyze(String statementName,
-                        String[] portalNameCapture,
                         Statement statement,
                         List<DataType> paramTypes,
                         @Nullable String query) {
@@ -290,6 +285,7 @@ public class Session implements AutoCloseable {
             analyzedStatement = analyzer.analyze(
                 statement,
                 sessionContext,
+                portals,
                 new ParamTypeHints(paramTypes));
 
             parameterTypes = parameterTypeExtractor.getParameterTypes(
@@ -305,9 +301,6 @@ public class Session implements AutoCloseable {
         }
 
         preparedStatements.put(statementName, new PreparedStmt(statement, analyzedStatement, query, parameterTypes));
-        if (analyzedStatement instanceof AnalyzedDeclareCursor declareCursor) {
-            portalNameCapture[0] = declareCursor.getCursorName();
-        }
     }
 
     public void bind(String portalName,
@@ -325,19 +318,13 @@ public class Session implements AutoCloseable {
             throw t;
         }
 
-        Portal portal = new Portal(
+        Portal portal = portals.create(
             portalName,
             preparedStmt,
             params,
             preparedStmt.analyzedStatement(),
             resultFormatCodes);
-        Portal oldPortal = portals.put(portalName, portal);
-        if (oldPortal != null) {
-            // According to the wire protocol spec named portals should be removed explicitly and only
-            // unnamed portals are implicitly closed/overridden.
-            // We don't comply with the spec because we allow batching of statements, see #execute
-            oldPortal.closeActiveConsumer();
-        }
+        portals.put(portalName, portal);
     }
 
     public DescribeResult describe(char type, String portalOrStatement) {
@@ -346,7 +333,7 @@ public class Session implements AutoCloseable {
         }
         switch (type) {
             case 'P':
-                Portal portal = getSafePortal(portalOrStatement);
+                Portal portal = portals.getSafePortal(portalOrStatement);
                 var analyzedStmt = portal.analyzedStatement();
                 return new DescribeResult(
                     portal.preparedStmt().parameterTypes(),
@@ -407,7 +394,7 @@ public class Session implements AutoCloseable {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("method=execute portalName={} maxRows={}", portalName, maxRows);
         }
-        Portal portal = getSafePortal(portalName);
+        Portal portal = portals.getSafePortal(portalName);
         var analyzedStmt = portal.analyzedStatement();
         if (isReadOnly && analyzedStmt.isWriteOperation()) {
             throw new ReadOnlyException(portal.preparedStmt().rawStatement());
@@ -625,6 +612,7 @@ public class Session implements AutoCloseable {
         var activeConsumer = portal.activeConsumer();
         if (activeConsumer != null && activeConsumer.suspended()) {
             activeConsumer.replaceResultReceiver(resultReceiver, maxRows);
+            jobsLogs.replaceStmt(portal.jobID(), portal.preparedStmt().rawStatement());
             activeConsumer.resume();
             return resultReceiver.completionFuture();
         }
@@ -677,13 +665,14 @@ public class Session implements AutoCloseable {
         RowConsumerToResultReceiver consumer = new RowConsumerToResultReceiver(
             resultReceiver, maxRows, new JobsLogsUpdateListener(mostRecentJobID, jobsLogs));
         portal.setActiveConsumer(consumer);
+        portal.setJobID(mostRecentJobID);
         plan.execute(executor, plannerContext, consumer, params, SubQueryResults.EMPTY);
         return resultReceiver.completionFuture();
     }
 
     @Nullable
     public List<? extends DataType> getOutputTypes(String portalName) {
-        Portal portal = getSafePortal(portalName);
+        Portal portal = portals.getSafePortal(portalName);
         var analyzedStatement = portal.analyzedStatement();
         List<Symbol> fields = analyzedStatement.outputs();
         if (fields != null) {
@@ -693,7 +682,7 @@ public class Session implements AutoCloseable {
     }
 
     public String getQuery(String portalName) {
-        return getSafePortal(portalName).preparedStmt().rawStatement();
+        return portals.getSafePortal(portalName).preparedStmt().rawStatement();
     }
 
     public DataType<?> getParamType(String statementName, int idx) {
@@ -711,7 +700,7 @@ public class Session implements AutoCloseable {
 
     @Nullable
     public FormatCodes.FormatCode[] getResultFormatCodes(String portal) {
-        return getSafePortal(portal).resultFormatCodes();
+        return portals.getSafePortal(portal).resultFormatCodes();
     }
 
     /**
@@ -797,5 +786,22 @@ public class Session implements AutoCloseable {
     @Nullable
     public java.util.UUID getMostRecentJobID() {
         return mostRecentJobID;
+    }
+
+    public String extractPortalFromQuery(Statement statement) {
+        if (statement instanceof Cursor cursor) {
+            return cursor.getCursorName();
+        }
+        return "";
+    }
+
+    public int extractMaxRowsFromPortal(String portalName) {
+        Statement stmt = portals.get(portalName).preparedStmt().parsedStatement();
+        if (stmt instanceof FetchFromCursor fetchFromCursor) {
+            return fetchFromCursor.count();
+        } else if (stmt instanceof DeclareCursor) {
+            return 1;
+        }
+        return 0;
     }
 }

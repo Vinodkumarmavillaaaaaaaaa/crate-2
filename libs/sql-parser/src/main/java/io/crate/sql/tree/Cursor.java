@@ -21,39 +21,15 @@
 
 package io.crate.sql.tree;
 
-public class DeclareCursor extends Cursor {
+public abstract class Cursor extends Statement {
 
-    private final Query query;
+    private final String cursorName;
 
-    public DeclareCursor(String cursorName, Query query) {
-        super(cursorName);
-        this.query = query;
+    protected Cursor(String cursorName) {
+        this.cursorName = cursorName;
     }
 
-    public Query getQuery() {
-        return query;
-    }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context) {
-        return visitor.visitDeclareCursor(this, context);
-    }
-
-    @Override
-    public int hashCode() {
-        return 0;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return false;
-    }
-
-    @Override
-    public String toString() {
-        return "DeclareCursor{" +
-               "cursorName=" + getCursorName() +
-               ", query=" + query +
-               '}';
+    public String getCursorName() {
+        return cursorName;
     }
 }

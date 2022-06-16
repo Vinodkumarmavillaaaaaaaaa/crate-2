@@ -135,6 +135,7 @@ public class LogicalReplicationAnalyzerTest extends CrateDummyClusterServiceUnit
             () -> e.analyzer.analyze(
                 SqlParser.createStatement("DROP PUBLICATION pub1"),
                 new SessionContext(User.of("other_user")),
+                null,
                 ParamTypeHints.EMPTY
             ),
             UnauthorizedException.class,
@@ -186,6 +187,7 @@ public class LogicalReplicationAnalyzerTest extends CrateDummyClusterServiceUnit
             () -> e.analyzer.analyze(
                 SqlParser.createStatement("ALTER PUBLICATION pub1 ADD TABLE doc.t2"),
                 new SessionContext(User.of("other_user")),
+                null,
                 ParamTypeHints.EMPTY
             ),
             UnauthorizedException.class,
@@ -231,6 +233,7 @@ public class LogicalReplicationAnalyzerTest extends CrateDummyClusterServiceUnit
             () -> e.analyzer.analyze(
                 SqlParser.createStatement("DROP SUBSCRIPTION sub1"),
                 new SessionContext(User.of("other_user")),
+                null,
                 ParamTypeHints.EMPTY
             ),
             UnauthorizedException.class,
@@ -248,6 +251,7 @@ public class LogicalReplicationAnalyzerTest extends CrateDummyClusterServiceUnit
             () -> e.analyzer.analyze(
                 SqlParser.createStatement("ALTER SUBSCRIPTION sub1 DISABLE"),
                 new SessionContext(User.of("other_user")),
+                null,
                 ParamTypeHints.EMPTY
             ),
             UnauthorizedException.class,

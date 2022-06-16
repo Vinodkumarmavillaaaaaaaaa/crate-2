@@ -136,11 +136,11 @@ public class RamAccountingQueueSinkTest extends ESTestCase {
             TimeValue.timeValueSeconds(1L)
         );
         q.add(new JobContextLog(new JobContext(UUID.fromString("067e6162-3b6f-4ae2-a171-2470b63dff01"),
-            "select 1", 1L, User.CRATE_USER, classification), null, 2000L));
+            "select 1", 1L, User.CRATE_USER.name(), classification), null, 2000L));
         q.add(new JobContextLog(new JobContext(UUID.fromString("067e6162-3b6f-4ae2-a171-2470b63dff02"),
-            "select 1", 1L, User.CRATE_USER, classification), null, 4000L));
+            "select 1", 1L, User.CRATE_USER.name(), classification), null, 4000L));
         q.add(new JobContextLog(new JobContext(UUID.fromString("067e6162-3b6f-4ae2-a171-2470b63dff03"),
-            "select 1", 1L, User.CRATE_USER, classification), null, 7000L));
+            "select 1", 1L, User.CRATE_USER.name(), classification), null, 7000L));
 
         TimeBasedQEviction.removeExpiredLogs(q, 10_000L, 5_000L);
         assertThat(q.size(), is(1));

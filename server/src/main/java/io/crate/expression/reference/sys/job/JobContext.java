@@ -21,7 +21,6 @@
 
 package io.crate.expression.reference.sys.job;
 
-import io.crate.user.User;
 import io.crate.planner.operators.StatementClassifier.Classification;
 
 import javax.annotation.Nullable;
@@ -36,11 +35,11 @@ public class JobContext {
     @Nullable
     private final Classification classification;
 
-    public JobContext(UUID id, String stmt, long started, User user, @Nullable Classification classification) {
+    public JobContext(UUID id, String stmt, long started, String username, @Nullable Classification classification) {
         this.id = id;
         this.stmt = stmt;
         this.started = started;
-        this.username = user.name();
+        this.username = username;
         this.classification = classification;
     }
 

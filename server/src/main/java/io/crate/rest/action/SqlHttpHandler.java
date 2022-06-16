@@ -31,6 +31,7 @@ import io.crate.action.sql.parser.SQLRequestParser;
 import io.crate.auth.AuthSettings;
 import io.crate.auth.AccessControl;
 import io.crate.common.annotations.VisibleForTesting;
+import io.crate.sql.tree.Statement;
 import io.crate.user.User;
 import io.crate.user.UserLookup;
 import io.crate.breaker.BlockBasedRamAccounting;
@@ -232,10 +233,10 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                                                                     List<Object> args,
                                                                     boolean includeTypes) throws IOException {
         long startTimeInNs = System.nanoTime();
-        String[] portalNameCapture = new String[]{""};
-        session.parse(UNNAMED, portalNameCapture, stmt, emptyList());
-        session.bind(portalNameCapture[0], UNNAMED, args == null ? emptyList() : args, null);
-        DescribeResult description = session.describe('P', portalNameCapture[0]);
+        Statement parsedStmt = session.parse(UNNAMED, stmt, emptyList());
+        String portalName = session.extractPortalFromQuery(parsedStmt);
+        session.bind(portalName, UNNAMED, args == null ? emptyList() : args, null);
+        DescribeResult description = session.describe('P', portalName);
         List<Symbol> resultFields = description.getFields();
         ResultReceiver<XContentBuilder> resultReceiver;
         if (resultFields == null) {
@@ -257,7 +258,7 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             );
             resultReceiver.completionFuture().whenComplete((result, error) -> ramAccounting.close());
         }
-        session.execute(portalNameCapture[0], portalNameCapture.length > 0 ? 1 : 0, resultReceiver);
+        session.execute(portalName, session.extractMaxRowsFromPortal(portalName), resultReceiver);
         return session.sync()
             .thenCompose(ignored -> resultReceiver.completionFuture());
     }
@@ -266,16 +267,16 @@ public class SqlHttpHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                                                                   String stmt,
                                                                   List<List<Object>> bulkArgs) {
         final long startTimeInNs = System.nanoTime();
-        String[] portalNameCapture = new String[]{""};
-        session.parse(UNNAMED, portalNameCapture, stmt, emptyList());
+        Statement parsedStmt = session.parse(UNNAMED, stmt, emptyList());
+        String portalName = session.extractPortalFromQuery(parsedStmt);
         final RestBulkRowCountReceiver.Result[] results = new RestBulkRowCountReceiver.Result[bulkArgs.size()];
         for (int i = 0; i < bulkArgs.size(); i++) {
-            session.bind(portalNameCapture[0], UNNAMED, bulkArgs.get(i), null);
+            session.bind(portalName, UNNAMED, bulkArgs.get(i), null);
             ResultReceiver resultReceiver = new RestBulkRowCountReceiver(results, i);
-            session.execute(portalNameCapture[0], 0, resultReceiver);
+            session.execute(portalName, 0, resultReceiver);
         }
         if (results.length > 0) {
-            DescribeResult describeResult = session.describe('P', portalNameCapture[0]);
+            DescribeResult describeResult = session.describe('P', portalName);
             if (describeResult.getFields() != null) {
                 return CompletableFuture.failedFuture(new UnsupportedOperationException(
                             "Bulk operations for statements that return result sets is not supported"));

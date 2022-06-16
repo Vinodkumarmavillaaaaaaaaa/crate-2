@@ -29,6 +29,8 @@ import io.crate.metadata.FulltextAnalyzerResolver;
 import io.crate.metadata.NodeContext;
 import io.crate.metadata.Schemas;
 import io.crate.metadata.settings.session.SessionSettingRegistry;
+import io.crate.protocols.postgres.Portal;
+import io.crate.protocols.postgres.Portals;
 import io.crate.replication.logical.LogicalReplicationService;
 import io.crate.replication.logical.analyze.LogicalReplicationAnalyzer;
 import io.crate.sql.tree.AlterBlobTable;
@@ -77,6 +79,7 @@ import io.crate.sql.tree.DropUser;
 import io.crate.sql.tree.DropView;
 import io.crate.sql.tree.Explain;
 import io.crate.sql.tree.Expression;
+import io.crate.sql.tree.FetchFromCursor;
 import io.crate.sql.tree.GCDanglingArtifacts;
 import io.crate.sql.tree.GrantPrivilege;
 import io.crate.sql.tree.Insert;
@@ -211,12 +214,14 @@ public class Analyzer {
 
     public AnalyzedStatement analyze(Statement statement,
                                      SessionContext sessionContext,
+                                     Portals portals,
                                      ParamTypeHints paramTypeHints) {
         var analyzedStatement = statement.accept(
             dispatcher,
             new Analysis(
                 new CoordinatorTxnCtx(sessionContext),
-                paramTypeHints));
+                paramTypeHints,
+                portals));
         userManager.getAccessControl(sessionContext).ensureMayExecute(analyzedStatement);
         return analyzedStatement;
     }
@@ -688,7 +693,18 @@ public class Analyzer {
         @Override
         public AnalyzedStatement visitDeclareCursor(DeclareCursor declareCursor,
                                                     Analysis context) {
-            return declareCursorAnalyzer.analyze(declareCursor, context.paramTypeHints(), context.transactionContext());
+            return declareCursorAnalyzer.analyze(declareCursor, context.paramTypeHints(), context.transactionContext(), context.portals());
+        }
+
+        @Override
+        public AnalyzedStatement visitFetchFromCursor(FetchFromCursor fetchFromCursor, Analysis context) {
+            if (context.portals() != null) {
+                Portal portal = context.portals().get(fetchFromCursor.getCursorName());
+                if (portal != null) {
+                    return new AnalyzedFetchFromCursor(fetchFromCursor.count(), portal);
+                }
+            }
+            throw new IllegalArgumentException("Cursor named \"" + fetchFromCursor.getCursorName() + "\" has not been declared.");
         }
     }
 }

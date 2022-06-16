@@ -19,41 +19,47 @@
  * software solely pursuant to the terms of the relevant commercial agreement.
  */
 
-package io.crate.sql.tree;
+package io.crate.analyze;
 
-public class DeclareCursor extends Cursor {
+import io.crate.expression.symbol.Symbol;
+import io.crate.protocols.postgres.Portal;
 
-    private final Query query;
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.function.Consumer;
 
-    public DeclareCursor(String cursorName, Query query) {
-        super(cursorName);
-        this.query = query;
+public class AnalyzedFetchFromCursor implements AnalyzedStatement {
+
+    private final int count;
+    private final AnalyzedStatement analyzedDeclareCursor;
+
+    public AnalyzedFetchFromCursor(int count, Portal portal) {
+        this.count = count;
+        this.analyzedDeclareCursor = portal.analyzedStatement();
     }
 
-    public Query getQuery() {
-        return query;
+    public int count() {
+        return count;
     }
 
     @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context) {
-        return visitor.visitDeclareCursor(this, context);
+    public <C, R> R accept(AnalyzedStatementVisitor<C, R> analyzedStatementVisitor, C context) {
+        return null;
     }
 
     @Override
-    public int hashCode() {
-        return 0;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
+    public boolean isWriteOperation() {
         return false;
     }
 
     @Override
-    public String toString() {
-        return "DeclareCursor{" +
-               "cursorName=" + getCursorName() +
-               ", query=" + query +
-               '}';
+    public void visitSymbols(Consumer<? super Symbol> consumer) {
+
+    }
+
+    @Nullable
+    @Override
+    public List<Symbol> outputs() {
+        return analyzedDeclareCursor.outputs();
     }
 }

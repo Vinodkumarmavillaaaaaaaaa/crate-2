@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import io.crate.sql.tree.FetchFromCursor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -2039,7 +2040,8 @@ class AstBuilder extends SqlBaseBaseVisitor<Node> {
 
     @Override
     public Node visitFetchFromCursor(SqlBaseParser.FetchFromCursorContext ctx) {
-        return super.visitFetchFromCursor(ctx);
+        return new FetchFromCursor(
+            Integer.parseInt(ctx.direction().integerLiteral().getText()), getIdentText(ctx.ident()));
     }
 
     private static String getObjectType(Token type) {

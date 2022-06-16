@@ -27,11 +27,13 @@ import io.crate.analyze.AnalyzedStatement;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.UUID;
 
-public final class Portal {
+public class Portal {
 
     private String portalName;
-    private final PreparedStmt preparedStmt;
+    private UUID jobID;
+    private PreparedStmt preparedStmt;
     private final List<Object> params;
     private final AnalyzedStatement analyzedStatement;
 
@@ -40,11 +42,11 @@ public final class Portal {
 
     private RowConsumerToResultReceiver consumer;
 
-    public Portal(String portalName,
-                  PreparedStmt preparedStmt,
-                  List<Object> params,
-                  AnalyzedStatement analyzedStatement,
-                  @Nullable FormatCodes.FormatCode[] resultFormatCodes) {
+    Portal(String portalName,
+           PreparedStmt preparedStmt,
+           List<Object> params,
+           AnalyzedStatement analyzedStatement,
+           @Nullable FormatCodes.FormatCode[] resultFormatCodes) {
         this.portalName = portalName;
         this.preparedStmt = preparedStmt;
         this.params = params;
@@ -80,6 +82,14 @@ public final class Portal {
     @Nullable
     public RowConsumerToResultReceiver activeConsumer() {
         return consumer;
+    }
+
+    public void setJobID(UUID jobID) {
+        this.jobID = jobID;
+    }
+
+    public UUID jobID() {
+        return jobID;
     }
 
     public void closeActiveConsumer() {

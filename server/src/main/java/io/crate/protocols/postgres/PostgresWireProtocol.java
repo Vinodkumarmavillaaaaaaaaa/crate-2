@@ -522,7 +522,7 @@ public class PostgresWireProtocol {
             }
             paramTypes.add(dataType);
         }
-        session.parse(statementName, new String[]{""}, query, paramTypes);
+        session.parse(statementName, query, paramTypes);
         Messages.sendParseComplete(channel);
     }
 
@@ -766,17 +766,17 @@ public class PostgresWireProtocol {
             query = statement.toString();
         }
         AccessControl accessControl = getAccessControl.apply(session.sessionContext());
-        String[] portalNameCapture = new String[]{""};
+        String portalName = session.extractPortalFromQuery(statement);
         try {
-            session.analyze("", portalNameCapture, statement, Collections.emptyList(), query);
-            session.bind(portalNameCapture[0], "", Collections.emptyList(), null);
-            DescribeResult describeResult = session.describe('P', portalNameCapture[0]);
+            session.analyze("", statement, Collections.emptyList(), query);
+            session.bind(portalName, "", Collections.emptyList(), null);
+            DescribeResult describeResult = session.describe('P', portalName);
             List<Symbol> fields = describeResult.getFields();
 
             CompletableFuture<?> execute;
             if (fields == null) {
                 RowCountReceiver rowCountReceiver = new RowCountReceiver(query, channel.bypassDelay(), accessControl);
-                execute = session.execute(portalNameCapture[0], portalNameCapture.length > 0 ? 1 : 0, rowCountReceiver);
+                execute = session.execute(portalName, session.extractMaxRowsFromPortal(portalName), rowCountReceiver);
             } else {
                 Messages.sendRowDescription(channel, fields, null, describeResult.relation());
                 ResultSetReceiver resultSetReceiver = new ResultSetReceiver(
@@ -787,7 +787,7 @@ public class PostgresWireProtocol {
                     Lists2.map(fields, x -> PGTypes.get(x.valueType())),
                     null
                 );
-                execute = session.execute(portalNameCapture[0], 0, resultSetReceiver);
+                execute = session.execute(portalName, 0, resultSetReceiver);
             }
             if (execute != null) {
                 channel.delayWritesUntil(execute);

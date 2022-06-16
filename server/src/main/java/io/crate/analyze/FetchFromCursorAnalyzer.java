@@ -19,41 +19,7 @@
  * software solely pursuant to the terms of the relevant commercial agreement.
  */
 
-package io.crate.sql.tree;
+package io.crate.analyze;
 
-public class DeclareCursor extends Cursor {
-
-    private final Query query;
-
-    public DeclareCursor(String cursorName, Query query) {
-        super(cursorName);
-        this.query = query;
-    }
-
-    public Query getQuery() {
-        return query;
-    }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context) {
-        return visitor.visitDeclareCursor(this, context);
-    }
-
-    @Override
-    public int hashCode() {
-        return 0;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return false;
-    }
-
-    @Override
-    public String toString() {
-        return "DeclareCursor{" +
-               "cursorName=" + getCursorName() +
-               ", query=" + query +
-               '}';
-    }
+public class FetchFromCursorAnalyzer {
 }

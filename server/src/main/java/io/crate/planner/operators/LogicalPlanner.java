@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import io.crate.analyze.AnalyzedDeclareCursor;
 import io.crate.metadata.RelationName;

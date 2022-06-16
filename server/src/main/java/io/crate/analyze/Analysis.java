@@ -23,15 +23,22 @@ package io.crate.analyze;
 
 import io.crate.action.sql.SessionContext;
 import io.crate.metadata.CoordinatorTxnCtx;
+import io.crate.protocols.postgres.Portals;
 
 public class Analysis {
 
     private final CoordinatorTxnCtx coordinatorTxnCtx;
     private final ParamTypeHints paramTypeHints;
+    private final Portals portals;
 
-    public Analysis(CoordinatorTxnCtx coordinatorTxnCtx, ParamTypeHints paramTypeHints) {
+    public Analysis(CoordinatorTxnCtx coordinatorTxnCtx, ParamTypeHints paramTypeHints, Portals portals) {
         this.paramTypeHints = paramTypeHints;
         this.coordinatorTxnCtx = coordinatorTxnCtx;
+        this.portals = portals;
+    }
+
+    public Portals portals() {
+        return portals;
     }
 
     public CoordinatorTxnCtx transactionContext() {

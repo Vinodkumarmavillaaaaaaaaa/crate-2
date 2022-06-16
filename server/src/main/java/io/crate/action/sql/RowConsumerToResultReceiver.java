@@ -70,7 +70,7 @@ public class RowConsumerToResultReceiver implements RowConsumer {
                 rowCount++;
                 resultReceiver.setNextRow(iterator.currentElement());
 
-                if (maxRows > 0 && rowCount % maxRows == 0) {
+                if ((maxRows > 0 && rowCount % maxRows == 0) || maxRows == -1) {
                     activeIt = iterator;
                     resultReceiver.batchFinished();
                     return; // resumed via postgres protocol, close is done later
@@ -112,7 +112,7 @@ public class RowConsumerToResultReceiver implements RowConsumer {
     }
 
     public boolean suspended() {
-        return activeIt != null;
+        return activeIt != null || maxRows == -1;
     }
 
     public void replaceResultReceiver(ResultReceiver resultReceiver, int maxRows) {

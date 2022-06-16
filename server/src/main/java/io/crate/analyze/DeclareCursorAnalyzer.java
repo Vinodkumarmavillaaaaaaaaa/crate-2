@@ -23,6 +23,7 @@ package io.crate.analyze;
 
 import io.crate.analyze.relations.RelationAnalyzer;
 import io.crate.metadata.CoordinatorTxnCtx;
+import io.crate.protocols.postgres.Portals;
 import io.crate.sql.tree.DeclareCursor;
 
 public class DeclareCursorAnalyzer {
@@ -35,7 +36,12 @@ public class DeclareCursorAnalyzer {
 
     public AnalyzedDeclareCursor analyze(DeclareCursor declareCursor,
                                          ParamTypeHints paramTypeHints,
-                                         CoordinatorTxnCtx txnCtx) {
+                                         CoordinatorTxnCtx txnCtx,
+                                         Portals portals) {
+        String cursorName = declareCursor.getCursorName();
+        if (portals.containsKey(cursorName)) {
+            throw new IllegalArgumentException("The cursor '" + cursorName + "' already declared.");
+        }
         return new AnalyzedDeclareCursor(
             declareCursor.getCursorName(),
             relationAnalyzer.analyze(declareCursor.getQuery(), txnCtx, paramTypeHints));

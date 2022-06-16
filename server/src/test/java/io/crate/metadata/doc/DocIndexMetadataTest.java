@@ -1085,7 +1085,7 @@ public class DocIndexMetadataTest extends CrateDummyClusterServiceUnitTest {
 
         CreateTableStatementAnalyzer analyzer = new CreateTableStatementAnalyzer(nodeCtx);
 
-        Analysis analysis = new Analysis(new CoordinatorTxnCtx(SessionContext.systemSessionContext()), ParamTypeHints.EMPTY);
+        Analysis analysis = new Analysis(new CoordinatorTxnCtx(SessionContext.systemSessionContext()), ParamTypeHints.EMPTY, null);
         CoordinatorTxnCtx txnCtx = new CoordinatorTxnCtx(SessionContext.systemSessionContext());
         AnalyzedCreateTable analyzedCreateTable = analyzer.analyze(
             (CreateTable<Expression>) statement,

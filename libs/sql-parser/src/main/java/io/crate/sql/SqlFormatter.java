@@ -76,6 +76,7 @@ import io.crate.sql.tree.DropView;
 import io.crate.sql.tree.EscapedCharStringLiteral;
 import io.crate.sql.tree.Explain;
 import io.crate.sql.tree.Expression;
+import io.crate.sql.tree.FetchFromCursor;
 import io.crate.sql.tree.FunctionArgument;
 import io.crate.sql.tree.GCDanglingArtifacts;
 import io.crate.sql.tree.GenericProperties;
@@ -1227,6 +1228,16 @@ public final class SqlFormatter {
                 .append(declareCursor.getCursorName())
                 .append(" CURSOR FOR ")
                 .append(declareCursor.getQuery().accept(this, context));
+            return null;
+        }
+
+        @Override
+        public Void visitFetchFromCursor(FetchFromCursor fetchFromCursor, Integer context) {
+            builder
+                .append("FETCH FORWARD")
+                .append(fetchFromCursor.count())
+                .append(" FROM ")
+                .append(fetchFromCursor.getCursorName());
             return null;
         }
 

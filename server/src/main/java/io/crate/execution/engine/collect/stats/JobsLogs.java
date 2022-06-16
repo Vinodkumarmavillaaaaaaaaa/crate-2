@@ -107,7 +107,7 @@ public class JobsLogs {
         if (!isEnabled()) {
             return;
         }
-        jobsTable.put(jobId, new JobContext(jobId, statement, System.currentTimeMillis(), user, classification));
+        jobsTable.put(jobId, new JobContext(jobId, statement, System.currentTimeMillis(), user.name(), classification));
     }
 
     /**
@@ -150,7 +150,7 @@ public class JobsLogs {
      */
     public void logPreExecutionFailure(UUID jobId, String stmt, String errorMessage, User user) {
         JobContextLog jobContextLog = new JobContextLog(
-            new JobContext(jobId, stmt, System.currentTimeMillis(), user, new StatementClassifier.Classification(UNDEFINED)), errorMessage);
+            new JobContext(jobId, stmt, System.currentTimeMillis(), user.name(), new StatementClassifier.Classification(UNDEFINED)), errorMessage);
         long stamp = jobsLogLock.readLock();
         try {
             jobsLog.add(jobContextLog);
@@ -250,5 +250,14 @@ public class JobsLogs {
     public void close() {
         jobsLog.close();
         operationsLog.close();
+    }
+
+    public void replaceStmt(UUID uuid, String toReplace) {
+        var jobContext = jobsTable.get(uuid);
+        jobsTable.put(uuid, new JobContext(uuid,
+                                           toReplace,
+                                           jobContext.started(),
+                                           jobContext.username(),
+                                           jobContext.classification()));
     }
 }

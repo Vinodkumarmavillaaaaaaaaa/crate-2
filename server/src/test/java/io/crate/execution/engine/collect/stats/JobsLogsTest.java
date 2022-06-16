@@ -106,9 +106,9 @@ public class JobsLogsTest extends CrateDummyClusterServiceUnitTest {
         LogSink<JobContextLog> jobsLogSink = (LogSink<JobContextLog>) stats.get().jobsLog();
 
         jobsLogSink.add(new JobContextLog(
-            new JobContext(UUID.randomUUID(), "insert into", 10L, User.CRATE_USER, null), null, 20L));
+            new JobContext(UUID.randomUUID(), "insert into", 10L, User.CRATE_USER.name(), null), null, 20L));
         jobsLogSink.add(new JobContextLog(
-            new JobContext(UUID.randomUUID(), "select * from t1", 10L, User.CRATE_USER, null), null, 20L));
+            new JobContext(UUID.randomUUID(), "select * from t1", 10L, User.CRATE_USER.name(), null), null, 20L));
         assertThat(StreamSupport.stream(jobsLogSink.spliterator(), false).count(), is(1L));
     }
 
@@ -250,7 +250,7 @@ public class JobsLogsTest extends CrateDummyClusterServiceUnitTest {
             new Classification(SELECT, Collections.singleton("Collect"));
 
         jobsLogSink.add(new JobContextLog(
-            new JobContext(UUID.randomUUID(), "select 1", 1L, User.CRATE_USER, classification), null));
+            new JobContext(UUID.randomUUID(), "select 1", 1L, User.CRATE_USER.name(), classification), null));
 
         clusterSettings.applySettings(Settings.builder()
             .put(JobsLogService.STATS_ENABLED_SETTING.getKey(), true)
@@ -367,7 +367,7 @@ public class JobsLogsTest extends CrateDummyClusterServiceUnitTest {
         Classification classification =
             new Classification(SELECT, Collections.singleton("Collect"));
 
-        JobContext jobContext = new JobContext(UUID.randomUUID(), "select 1", 1L, user, classification);
+        JobContext jobContext = new JobContext(UUID.randomUUID(), "select 1", 1L, user.name(), classification);
         jobsLogs.logExecutionStart(jobContext.id(), jobContext.stmt(), user, classification);
         List<JobContext> jobsEntries = StreamSupport.stream(jobsLogs.activeJobs().spliterator(), false)
             .collect(Collectors.toList());

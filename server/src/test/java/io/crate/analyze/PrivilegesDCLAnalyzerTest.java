@@ -269,6 +269,7 @@ public class PrivilegesDCLAnalyzerTest extends CrateDummyClusterServiceUnitTest 
         return (AnalyzedPrivileges) e.analyzer.analyze(
             SqlParser.createStatement(statement),
             new SessionContext(GRANTOR_TEST_USER),
+            null,
             ParamTypeHints.EMPTY);
     }
 

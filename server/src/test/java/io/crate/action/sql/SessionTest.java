@@ -134,7 +134,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             mock(DependencyCarrier.class),
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{""}, "Select 1 + ? + ?;", Collections.emptyList());
+        session.parse("S_1", "Select 1 + ? + ?;", Collections.emptyList());
         Assertions.assertThrows(
             IllegalArgumentException.class,
             () -> session.getParamType("S_1", 3),
@@ -155,7 +155,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{""}, "Select 1 + ? + ?;", Collections.emptyList());
+        session.parse("S_1", "Select 1 + ? + ?;", Collections.emptyList());
         assertThat(session.getParamType("S_1", 0), is(DataTypes.INTEGER));
         assertThat(session.getParamType("S_1", 1), is(DataTypes.INTEGER));
 
@@ -184,7 +184,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             .when(session)
             .singleExec(any(Portal.class), any(ResultReceiver.class), anyInt());
 
-        session.parse("S_1", new String[]{"Portal"}, "select name from sys.cluster;", List.of());
+        session.parse("S_1", "select name from sys.cluster;", List.of());
         session.bind("Portal", "S_1", Collections.emptyList(), null);
         session.describe('S', "S_1");
         session.execute("Portal", 1, new BaseResultReceiver());
@@ -219,7 +219,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             dependencies,
             SessionContext.systemSessionContext())
         );
-        session.parse("", new String[]{""}, "insert into users (name) values (?)", List.of());
+        session.parse("", "insert into users (name) values (?)", List.of());
         session.bind("", "", List.of("Arthur"), null);
         session.execute("", -1, new BaseResultReceiver());
         assertThat(session.deferredExecutionsByStmt.size(), is(1));
@@ -237,6 +237,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
         AnalyzedStatement analyzedStatement = e.analyzer.analyze(
             SqlParser.createStatement("delete from users where name = ?"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         ParameterTypeExtractor typeExtractor = new ParameterTypeExtractor();
@@ -251,6 +252,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
         AnalyzedStatement analyzedStatement = e.analyzer.analyze(
             SqlParser.createStatement("update users set name = ? || '_updated' where id = ?"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         ParameterTypeExtractor typeExtractor = new ParameterTypeExtractor();
@@ -265,6 +267,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
         AnalyzedStatement analyzedStatement = e.analyzer.analyze(
             SqlParser.createStatement("INSERT INTO users (id, name) values (?, ?)"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         ParameterTypeExtractor typeExtractor = new ParameterTypeExtractor();
@@ -282,6 +285,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             SqlParser.createStatement("INSERT INTO users (id, name) (SELECT id, name FROM users_clustered_by_only " +
                                       "WHERE name = ?)"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         ParameterTypeExtractor typeExtractor = new ParameterTypeExtractor();
@@ -299,6 +303,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             SqlParser.createStatement("INSERT INTO users (id, name) values (?, ?) " +
                                       "ON CONFLICT (id) DO UPDATE SET name = ?"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         ParameterTypeExtractor typeExtractor = new ParameterTypeExtractor();
@@ -310,6 +315,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             SqlParser.createStatement("INSERT INTO users (id, name) (SELECT id, name FROM users_clustered_by_only " +
                                       "WHERE name = ?) ON CONFLICT (id) DO UPDATE SET name = ?"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         typeExtractor = new ParameterTypeExtractor();
@@ -325,6 +331,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
         AnalyzedStatement stmt = e.analyzer.analyze(
             SqlParser.createStatement("select * from (select $1::int + $2) t"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         DataType[] parameterTypes = new ParameterTypeExtractor().getParameterTypes(
@@ -341,6 +348,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
         AnalyzedStatement stmt = e.analyzer.analyze(
             SqlParser.createStatement("insert into t (x) (select * from (select $1::int + $2) t)"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         DataType[] parameterTypes = new ParameterTypeExtractor().getParameterTypes(
@@ -357,6 +365,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
         AnalyzedStatement stmt = e.analyzer.analyze(
             SqlParser.createStatement("delete from t where x = (select $1::long)"),
             SessionContext.systemSessionContext(),
+            null,
             ParamTypeHints.EMPTY
         );
         DataType[] parameterTypes = new ParameterTypeExtractor().getParameterTypes(
@@ -378,11 +387,11 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{"Portal"}, "select name from sys.cluster;", Collections.emptyList());
+        session.parse("S_1", "select name from sys.cluster;", Collections.emptyList());
         session.bind("Portal", "S_1", Collections.emptyList(), null);
         session.describe('S', "S_1");
 
-        session.parse("S_2", new String[]{""}, "select id from sys.cluster", Collections.emptyList());
+        session.parse("S_2", "select id from sys.cluster", Collections.emptyList());
         session.bind("", "S_2", Collections.emptyList(), null);
         session.describe('S', "S_2");
 
@@ -413,11 +422,11 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{"Portal"}, "select * from sys.cluster;", Collections.emptyList());
+        session.parse("S_1", "select * from sys.cluster;", Collections.emptyList());
         session.bind("Portal", "S_1", Collections.emptyList(), null);
         session.describe('S', "S_1");
 
-        session.parse("S_2", new String[]{""}, "DEALLOCATE ALL;", Collections.emptyList());
+        session.parse("S_2", "DEALLOCATE ALL;", Collections.emptyList());
         session.bind("", "S_2", Collections.emptyList(), null);
         session.execute("", 0, new BaseResultReceiver());
 
@@ -440,11 +449,11 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("test_prep_stmt", new String[]{"Portal"}, "select * from sys.cluster;", Collections.emptyList());
+        session.parse("test_prep_stmt", "select * from sys.cluster;", Collections.emptyList());
         session.bind("Portal", "test_prep_stmt", Collections.emptyList(), null);
         session.describe('S', "test_prep_stmt");
 
-        session.parse("stmt", new String[]{""}, "DEALLOCATE test_prep_stmt;", Collections.emptyList());
+        session.parse("stmt", "DEALLOCATE test_prep_stmt;", Collections.emptyList());
         session.bind("", "stmt", Collections.emptyList(), null);
         session.execute("", 0, new BaseResultReceiver());
 
@@ -466,7 +475,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{"P_1"}, "SELECT 1", List.of());
+        session.parse("S_1", "SELECT 1", List.of());
         session.bind("P_1", "S_1", List.of(), null);
 
         assertThat(session.portals.size(), is(1));
@@ -490,13 +499,13 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{"P_1"}, "SELECT 1", List.of());
+        session.parse("S_1", "SELECT 1", List.of());
         session.bind("P_1", "S_1", List.of(), null);
 
         assertThat(session.portals.size(), is(1));
         assertThat(session.preparedStatements.size(), is(1));
 
-        session.parse("stmt", new String[]{""}, "DISCARD ALL", Collections.emptyList());
+        session.parse("stmt", "DISCARD ALL", Collections.emptyList());
         session.bind("", "stmt", Collections.emptyList(), null);
         session.execute("", 0, new BaseResultReceiver());
 
@@ -539,7 +548,7 @@ public class SessionTest extends CrateDummyClusterServiceUnitTest {
             executor,
             SessionContext.systemSessionContext());
 
-        session.parse("S_1", new String[]{"P_1"}, "INSERT INTO t1 (x) VALUES (1)", List.of());
+        session.parse("S_1", "INSERT INTO t1 (x) VALUES (1)", List.of());
         session.bind("P_1", "S_1", List.of(), null);
         session.execute("P_1", 0, new BaseResultReceiver());
 

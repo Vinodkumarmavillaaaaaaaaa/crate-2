@@ -22,15 +22,22 @@
 package io.crate.sql.tree;
 
 // forward-only yet
-public class FetchFromCursor extends Statement {
+public class FetchFromCursor extends Cursor {
 
-    //private final int count;
+    private final int count;
 
+    public FetchFromCursor(int count, String cursorName) {
+        super(cursorName);
+        this.count = count;
+    }
 
+    public int count() {
+        return count;
+    }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context) {
-        return super.accept(visitor, context);
+        return visitor.visitFetchFromCursor(this, context);
     }
 
     @Override

@@ -547,6 +547,7 @@ public abstract class SQLIntegrationTestCase extends ESIntegTestCase {
             analyzer.analyze(
                 SqlParser.createStatement(stmt),
                 coordinatorTxnCtx.sessionContext(),
+                null,
                 ParamTypeHints.EMPTY),
             plannerContext);
         return new PlanForNode(plan, nodeName, plannerContext);
