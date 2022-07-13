@@ -26,6 +26,7 @@ import io.crate.Constants;
 import io.crate.action.FutureActionListener;
 import io.crate.common.annotations.VisibleForTesting;
 import io.crate.common.collections.Lists2;
+import io.crate.common.collections.Maps;
 import io.crate.common.unit.TimeValue;
 import io.crate.metadata.IndexMappings;
 import io.crate.metadata.IndexParts;
@@ -69,6 +70,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import static io.crate.metadata.doc.DocIndexMetadata.furtherColumnProperties;
 import static org.elasticsearch.index.mapper.MapperService.parseMapping;
 
 @Singleton
@@ -202,6 +204,8 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
         for (ObjectObjectCursor<String, CompressedXContent> cursor : template.mappings()) {
             Map<String, Object> source = parseMapping(xContentRegistry, cursor.value.toString());
             mergeIntoSource(source, newMapping);
+            Map<String, Object> defaultMap = Maps.get(source, "default");
+            populateColumnPositions(defaultMap, findMaxColumnPosition(defaultMap));
             try (XContentBuilder xContentBuilder = JsonXContent.contentBuilder()) {
                 templateBuilder.putMapping(cursor.key, Strings.toString(xContentBuilder.map(source)));
             }
@@ -255,5 +259,44 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
     @Override
     protected ClusterBlockException checkBlock(SchemaUpdateRequest request, ClusterState state) {
         return state.blocks().globalBlockedException(ClusterBlockLevel.METADATA_WRITE);
+    }
+
+    public static int findMaxColumnPosition(Map<String, Object> map) {
+        Map<String, Object> properties = Maps.get(map, "properties");
+        if (properties == null) {
+            return 0;
+        }
+        int maxPosition = 0;
+        for (var e : properties.values()) {
+            Map<String, Object> columnProperties = (Map<String, Object>) e;
+            columnProperties = furtherColumnProperties(columnProperties);
+            Integer childPosition = (Integer) columnProperties.get("position");
+            if (childPosition != null) {
+                maxPosition = Math.max(maxPosition, childPosition);
+            }
+            maxPosition = Math.max(maxPosition, findMaxColumnPosition(columnProperties));
+        }
+        return maxPosition;
+    }
+
+    public static void populateColumnPositions(Map<String, Object> mapping, Integer columnPosition) {
+        populateColumnPositionsImpl(mapping, new Integer[]{columnPosition});
+    }
+
+    private static void populateColumnPositionsImpl(Map<String, Object> mapping, Integer[] columnPosition) {
+
+        Map<String, Object> properties = Maps.get(mapping, "properties");
+        if (properties == null) {
+            return;
+        }
+        for (var e : properties.values()) {
+            Map<String, Object> columnProperties = (Map<String, Object>) e;
+            columnProperties = furtherColumnProperties(columnProperties);
+            Integer childPosition = (Integer) columnProperties.get("position");
+            if (childPosition == null) {
+                columnProperties.put("position", ++columnPosition[0]);
+            }
+            populateColumnPositionsImpl(columnProperties, columnPosition);
+        }
     }
 }

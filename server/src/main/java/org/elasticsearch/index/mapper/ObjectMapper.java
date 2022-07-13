@@ -24,9 +24,7 @@ import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeIn
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;

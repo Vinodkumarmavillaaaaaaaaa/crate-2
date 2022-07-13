@@ -19,6 +19,8 @@
 
 package org.elasticsearch.cluster;
 
+import static io.crate.metadata.doc.DocIndexMetadata.furtherColumnProperties;
+
 import com.carrotsearch.hppc.cursors.IntObjectCursor;
 import com.carrotsearch.hppc.cursors.ObjectCursor;
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
@@ -61,9 +63,13 @@ import org.elasticsearch.discovery.Discovery;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+
+import io.crate.common.collections.Maps;
 
 /**
  * Represents the current state of the cluster.
@@ -680,6 +686,7 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
             if (UNKNOWN_UUID.equals(uuid)) {
                 uuid = UUIDs.randomBase64UUID();
             }
+            assert validateColumnPositions(metadata);
             return new ClusterState(clusterName, version, uuid, metadata, routingTable, nodes, blocks, customs.build(), fromDiff);
         }
 
@@ -826,6 +833,109 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
             builder.customs(customs.apply(state.customs));
             builder.fromDiff(true);
             return builder.build();
+        }
+    }
+
+    private static boolean validateColumnPositions(Metadata metadata) {
+        // validate indexMapping
+        for (var indexMetadata : metadata.indices().values()) {
+            MappingMetadata mappingMetadata = indexMetadata.value.mapping();
+            if (mappingMetadata != null) {
+                validateColumnPositions(mappingMetadata.sourceAsMap());
+            }
+        }
+
+        // validate IndexTemplateMetadata
+        for (var indexTemplateMetadata : metadata.templates().values()) {
+            for (var mapping : indexTemplateMetadata.value.mappings()) {
+                validateColumnPositions(XContentHelper.convertToMap(mapping.value.compressedReference(), true).v2());
+            }
+        }
+
+        for (var indexTemplateMetadata : metadata.templates().values()) {
+            for (var templateMapping : indexTemplateMetadata.value.mappings()) {
+                for (var indexMetadata : metadata.indices().values()) {
+                    String templateName = indexTemplateMetadata.value.name();
+                    String indexName = indexMetadata.value.getIndex().getName();
+                    templateName = templateName.split("\\.")[templateName.split("\\.").length - 1];
+                    indexName = indexName.split("\\.")[indexName.split("\\.").length - 1];
+                    if (templateName.equals(indexName)) {
+                        validateConsistentColumnPositions(
+                            XContentHelper.convertToMap(templateMapping.value.compressedReference(), true).v2(),
+                            XContentHelper.convertToMap(indexMetadata.value.mapping().source().compressedReference(),
+                                                        true).v2()
+                        );
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static void validateColumnPositions(Map<String, Object> mapping) {
+        Map<String, Object> defaultMapping = Maps.get(mapping, "default");
+        validateColumnPositions(
+            defaultMapping == null ? mapping : defaultMapping,
+            new HashSet<>());
+    }
+
+    private static void validateColumnPositions(Map<String, Object> mapping, Set<Integer> takenPositions) {
+        Map<String, Object> properties = Maps.get(mapping, "properties");
+        if (properties == null) {
+            return;
+        }
+        for (var e : properties.values()) {
+            Map<String, Object> columnProperties = (Map<String, Object>) e;
+            columnProperties = furtherColumnProperties(columnProperties);
+            Integer childPosition = (Integer) columnProperties.get("position");
+            if (childPosition == null) {
+                throw new AssertionError("missing column positions: " + mapping);
+            } else {
+                if (!takenPositions.add(childPosition)) {
+                    throw new AssertionError("duplicate column positions: " + mapping);
+                }
+            }
+            validateColumnPositions(columnProperties, takenPositions);
+        }
+    }
+
+    private static void validateConsistentColumnPositions(Map<String, Object> templateMapping, Map<String, Object> indexMapping) {
+        Map<String, Object> defaultTemplateMapping = Maps.get(templateMapping, "default");
+        Map<String, Object> defaultIndexMapping = Maps.get(indexMapping, "default");
+        if (defaultIndexMapping != null && defaultTemplateMapping != null) {
+            validateConsistentColumnPositionsImpl(defaultTemplateMapping, defaultIndexMapping);
+        }
+    }
+
+    private static void validateConsistentColumnPositionsImpl(Map<String, Object> templateMapping, Map<String, Object> indexMapping) {
+        Map<String, Object> indexProperties = Maps.get(indexMapping, "properties");
+        if (indexProperties == null) {
+            return;
+        }
+        Map<String, Object> templateProperties = Maps.get(templateMapping, "properties");
+        if (templateProperties == null) {
+            throw new AssertionError("columns in index-mapping should be available in template-mapping");
+        }
+        for (var e : indexProperties.entrySet()) {
+            String key = e.getKey();
+            Map<String, Object> templateColumnProperties = (Map<String, Object>) indexProperties.get(key);
+            Map<String, Object> indexColumnProperties = (Map<String, Object>) e.getValue();
+            if (indexColumnProperties == null) {
+                throw new AssertionError("columns in index-mapping should be available in template-mapping");
+            }
+
+            templateColumnProperties = furtherColumnProperties(templateColumnProperties);
+            indexColumnProperties = furtherColumnProperties(indexColumnProperties);
+
+            Integer templateChildPosition = (Integer) templateColumnProperties.get("position");
+            Integer indexChildPosition = (Integer) indexColumnProperties.get("position");
+
+            if (Objects.equals(templateChildPosition, indexChildPosition) == false) {
+                throw new AssertionError("inconsistent column positions");
+            }
+
+            validateConsistentColumnPositionsImpl(templateColumnProperties, indexColumnProperties);
         }
     }
 }

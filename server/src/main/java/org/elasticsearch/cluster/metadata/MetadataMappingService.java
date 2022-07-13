@@ -35,8 +35,14 @@ import javax.annotation.Nullable;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.inject.Inject;
+
+import io.crate.Constants;
+import io.crate.common.collections.Maps;
 import io.crate.common.unit.TimeValue;
 import io.crate.common.io.IOUtils;
+import io.crate.metadata.PartitionName;
+
+import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.Index;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.mapper.DocumentMapper;
@@ -44,13 +50,14 @@ import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.MapperService.MergeReason;
 import org.elasticsearch.indices.IndicesService;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.crate.execution.ddl.TransportSchemaUpdateAction.findMaxColumnPosition;
+import static io.crate.metadata.doc.DocIndexMetadata.furtherColumnProperties;
 import static org.elasticsearch.indices.cluster.IndicesClusterStateService.AllocatedIndices.IndexRemovalReason.NO_LONGER_ASSIGNED;
 
 /**
@@ -239,7 +246,7 @@ public class MetadataMappingService {
         }
 
         public ClusterState applyRequest(ClusterState currentState, PutMappingClusterStateUpdateRequest request,
-                                          Map<Index, MapperService> indexMapperServices) throws IOException {
+                                          Map<Index, MapperService> indexMapperServices) throws Exception {
             CompressedXContent mappingUpdateSource = new CompressedXContent(request.source());
             final Metadata metadata = currentState.metadata();
             final List<IndexMetadata> updateList = new ArrayList<>();
@@ -274,8 +281,9 @@ public class MetadataMappingService {
                 if (existingMapper != null) {
                     existingSource = existingMapper.mappingSource();
                 }
+                Map<String, Object> updatedSourceMap = populateColumnPositions(mappingUpdateSource, existingSource, index, currentState);
                 DocumentMapper mergedMapper
-                    = mapperService.merge(mappingUpdateSource, MergeReason.MAPPING_UPDATE);
+                    = mapperService.merge(updatedSourceMap, MergeReason.MAPPING_UPDATE);
                 CompressedXContent updatedSource = mergedMapper.mappingSource();
 
                 if (existingSource != null) {
@@ -359,5 +367,88 @@ public class MetadataMappingService {
                         return request.ackTimeout();
                     }
                 });
+    }
+
+    private Map<String, Object> populateColumnPositions(CompressedXContent mappingUpdateSource,
+                                                        CompressedXContent existingSource,
+                                                        Index index,
+                                                        ClusterState currentState) {
+        Map<String, Object> updatedSourceMap = XContentHelper.convertToMap(mappingUpdateSource.compressedReference(), true).v2();
+        Map<String, Object> existingSourceMap = null;
+        if (existingSource != null) {
+            existingSourceMap = XContentHelper.convertToMap(existingSource.compressedReference(), true).v2();
+        }
+        try {
+            String partitionName = PartitionName.templateName(index.getName());
+            IndexTemplateMetadata indexTemplateMetadata = currentState.metadata().templates().get(partitionName);
+            populateColumnPositions(
+                Maps.getOrDefault(updatedSourceMap, "default", Map.of()),
+                findMaxColumnPosition(Maps.getOrDefault(
+                    // maxColumnPosition of template mappings cannot be used here because an index is a subset of the template
+                    // existingSourceMap contains the latest column positions, if unavailable use updatedSourceMap
+                    existingSourceMap == null ? updatedSourceMap : existingSourceMap,
+                    "default",
+                    Map.of()
+                )),
+                // if partitioned, template-mapping should contain the latest column positions
+                indexTemplateMetadata.mappings().get(Constants.DEFAULT_MAPPING_TYPE)
+            );
+        } catch (Exception e) {
+            populateColumnPositions(
+                Maps.getOrDefault(updatedSourceMap, "default", Map.of()),
+                findMaxColumnPosition(Maps.getOrDefault(
+                    existingSourceMap == null ? updatedSourceMap : existingSourceMap,
+                    "default",
+                    Map.of()
+                )),
+                // if not partitioned, existingSource should contain the latest column positions
+                existingSource
+            );
+        }
+        return updatedSourceMap;
+    }
+
+    private void populateColumnPositions(Map<String, Object> mapping, Integer maxPosition, CompressedXContent mappingToReference) {
+        Map<String, Object> parsedTemplateMapping = XContentHelper.convertToMap(mappingToReference.compressedReference(), true).v2();
+
+        populateColumnPositionsImpl(
+            Maps.getOrDefault(mapping, "default", mapping),
+            new Integer[]{maxPosition},
+            Maps.getOrDefault(parsedTemplateMapping, "default", parsedTemplateMapping)
+        );
+    }
+
+    private void populateColumnPositionsImpl(Map<String, Object> indexMapping, Integer[] columnPosition, Map<String, Object> templateMapping) {
+        Map<String, Object> indexProperties = Maps.get(indexMapping, "properties");
+        if (indexProperties == null) {
+            return;
+        }
+        Map<String, Object> templateProperties = Maps.get(templateMapping, "properties");
+        if (templateProperties == null) {
+            templateProperties = Map.of();
+        }
+        for (var e : indexProperties.entrySet()) {
+            String key = e.getKey();
+            Map<String, Object> indexColumnProperties = (Map<String, Object>) e.getValue();
+            Map<String, Object> templateColumnProperties = (Map<String, Object>) templateProperties.get(key);
+
+            if (templateColumnProperties == null) {
+                templateColumnProperties = Map.of();
+            }
+            templateColumnProperties = furtherColumnProperties(templateColumnProperties);
+            indexColumnProperties = furtherColumnProperties(indexColumnProperties);
+
+            Integer indexChildPosition = (Integer) indexColumnProperties.get("position");
+            if (indexChildPosition == null) {
+                Integer templateChildPosition = (Integer) templateColumnProperties.get("position");
+                if (templateChildPosition != null) {
+                    indexColumnProperties.put("position", templateChildPosition);
+                } else {
+                    indexColumnProperties.put("position", ++columnPosition[0]);
+                }
+            }
+
+            populateColumnPositionsImpl(indexColumnProperties, columnPosition, templateColumnProperties);
+        }
     }
 }

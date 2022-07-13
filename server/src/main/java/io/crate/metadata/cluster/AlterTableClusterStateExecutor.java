@@ -231,6 +231,7 @@ public class AlterTableClusterStateExecutor extends DDLClusterStateTaskExecutor<
         // Why is everything behaving differently? Because reasons 🤷
         // This would be simpler if we distinguished between additions and deletions in the AlterTableRequest
         Map<String, Object> mappingDeltaAsMap = request.mappingDeltaAsMap();
+        // TODO: column positions calculated here could possibly suffer from a race condition due to concurrent ALTER TABLE ADD COLUMN stmts.
         Map<String, Object> metaDelta = (Map<String, Object>) mappingDeltaAsMap.get("_meta");
         if (metaDelta != null) {
             var curPartitionedBy = currentMeta.get("partitioned_by");
