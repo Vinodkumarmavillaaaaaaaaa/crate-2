@@ -56,7 +56,7 @@ public class SimpleReference implements Reference {
 
     public SimpleReference(StreamInput in) throws IOException {
         ident = new ReferenceIdent(in);
-        if (in.getVersion().before(Version.V_4_6_0)) {
+        if (in.getVersion().before(Version.V_4_6_0) || in.getVersion().onOrAfter(Version.V_5_1_0)) { // TODO:
             Integer pos = in.readOptionalVInt();
             position = pos == null ? 0 : pos;
         } else {
@@ -234,7 +234,7 @@ public class SimpleReference implements Reference {
     @Override
     public int hashCode() {
         int result = type.hashCode();
-        result = 31 * result + Integer.hashCode(position);
+        result = 31 * result + (position != null ? position.hashCode() : 0);
         result = 31 * result + ident.hashCode();
         result = 31 * result + columnPolicy.hashCode();
         result = 31 * result + granularity.hashCode();
@@ -248,7 +248,7 @@ public class SimpleReference implements Reference {
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         ident.writeTo(out);
-        if (out.getVersion().before(Version.V_4_6_0)) {
+        if (out.getVersion().before(Version.V_4_6_0) || out.getVersion().onOrAfter(Version.V_5_1_0)) {
             out.writeOptionalVInt(position);
         } else {
             out.writeVInt(position);

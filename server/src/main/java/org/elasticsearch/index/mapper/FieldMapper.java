@@ -103,14 +103,6 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
     protected CopyTo copyTo;
 
     /**
-     * Position of the field in the original CREATE TABLE statement
-     *
-     * This is null for system field mappers or for mappers within object fields.
-     */
-    @Nullable
-    protected Integer position;
-
-    /**
      * Expression that is used as the default value for a field
      */
     @Nullable String defaultExpression;

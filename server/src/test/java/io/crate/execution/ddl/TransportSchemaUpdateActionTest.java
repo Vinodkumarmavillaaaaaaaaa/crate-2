@@ -23,23 +23,14 @@ package io.crate.execution.ddl;
 
 import static io.crate.metadata.PartitionName.templateName;
 import static java.util.Collections.singletonMap;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 import java.util.HashMap;
 
-import org.elasticsearch.cluster.ClusterState;
-import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
-import org.elasticsearch.cluster.metadata.Metadata;
-import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.xcontent.NamedXContentRegistry;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
-import org.hamcrest.Matchers;
-import org.junit.Test;
-
 import io.crate.Constants;
 import io.crate.analyze.BoundAddColumn;
+import io.crate.common.collections.Maps;
 import io.crate.data.Row;
 import io.crate.metadata.IndexMappings;
 import io.crate.planner.PlannerContext;
@@ -47,6 +38,15 @@ import io.crate.planner.node.ddl.AlterTableAddColumnPlan;
 import io.crate.planner.operators.SubQueryResults;
 import io.crate.test.integration.CrateDummyClusterServiceUnitTest;
 import io.crate.testing.SQLExecutor;
+import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
+import org.elasticsearch.cluster.metadata.Metadata;
+import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.junit.Test;
+
+import java.util.Map;
 
 public class TransportSchemaUpdateActionTest extends CrateDummyClusterServiceUnitTest {
 
@@ -67,6 +67,10 @@ public class TransportSchemaUpdateActionTest extends CrateDummyClusterServiceUni
             SubQueryResults.EMPTY,
             null
         );
+        Map<String, Object> mapping = addXLong.mapping();
+        Map<String, Object> propertiesMap = Maps.get(mapping, "properties");
+        Map<String, Object> xLong = Maps.get(propertiesMap, "x");
+        xLong.put("position", 1);
         BoundAddColumn addXString = AlterTableAddColumnPlan.bind(
             e.analyze("alter table t add column x string"),
             plannerContext.transactionContext(),
@@ -75,7 +79,10 @@ public class TransportSchemaUpdateActionTest extends CrateDummyClusterServiceUni
             SubQueryResults.EMPTY,
             null
         );
-
+        mapping = addXString.mapping();
+        propertiesMap = Maps.get(mapping, "properties");
+        Map<String, Object> xString = Maps.get(propertiesMap, "x");
+        xString.put("position", 2);
         String templateName = templateName("doc", "t");
         IndexTemplateMetadata template = currentState.metadata().templates().get(templateName);
         ClusterState stateWithXLong = ClusterState.builder(currentState)
@@ -102,7 +109,7 @@ public class TransportSchemaUpdateActionTest extends CrateDummyClusterServiceUni
         HashMap<String, Object> source = new HashMap<>();
         source.put("dynamic", true);
         TransportSchemaUpdateAction.mergeIntoSource(source, singletonMap("dynamic", "true"));
-        assertThat(source.get("dynamic"), Matchers.is("true"));
+        assertThat(source.get("dynamic")).isEqualTo("true");
     }
 
     @Test
@@ -110,7 +117,7 @@ public class TransportSchemaUpdateActionTest extends CrateDummyClusterServiceUni
         HashMap<String, Object> source = new HashMap<>();
         source.put("dynamic", null);
         TransportSchemaUpdateAction.mergeIntoSource(source, singletonMap("dynamic", "true"));
-        assertThat(source.get("dynamic"), Matchers.is("true"));
+        assertThat(source.get("dynamic")).isEqualTo("true");
     }
 
     @Test
@@ -125,6 +132,6 @@ public class TransportSchemaUpdateActionTest extends CrateDummyClusterServiceUni
             Arrays.asList("default", "_meta", IndexMappings.VERSION_STRING, versionKey)
         );
 
-        assertThat(source.get(versionKey), is(100));
+        assertThat(source.get(versionKey)).isEqualTo(100);
     }
 }

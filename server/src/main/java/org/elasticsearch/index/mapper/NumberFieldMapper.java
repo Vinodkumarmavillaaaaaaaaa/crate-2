@@ -72,7 +72,7 @@ public class NumberFieldMapper extends FieldMapper {
 
         @Override
         public NumberFieldMapper build(BuilderContext context) {
-            return new NumberFieldMapper(
+            var mapper = new NumberFieldMapper(
                 name,
                 position,
                 defaultExpression,
@@ -81,6 +81,12 @@ public class NumberFieldMapper extends FieldMapper {
                 context.indexSettings(),
                 copyTo
             );
+            if (position == null) {
+                context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
+            } else {
+                context.getColumnPositionResolver().updateMaxColumnPosition(position);
+            }
+            return mapper;
         }
     }
 

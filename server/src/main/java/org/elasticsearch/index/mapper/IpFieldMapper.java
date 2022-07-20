@@ -60,7 +60,7 @@ public class IpFieldMapper extends FieldMapper {
 
         @Override
         public IpFieldMapper build(BuilderContext context) {
-            return new IpFieldMapper(
+            var mapper = new IpFieldMapper(
                 name,
                 position,
                 defaultExpression,
@@ -68,6 +68,12 @@ public class IpFieldMapper extends FieldMapper {
                 new IpFieldType(buildFullName(context), indexed, hasDocValues),
                 context.indexSettings(),
                 copyTo);
+            if (position == null) {
+                context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
+            } else {
+                context.getColumnPositionResolver().updateMaxColumnPosition(position);
+            }
+            return mapper;
         }
     }
 

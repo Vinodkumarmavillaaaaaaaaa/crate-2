@@ -92,7 +92,7 @@ public class ObjectMapper extends Mapper implements Cloneable {
             }
             context.path().remove();
 
-            return createMapper(
+            var mapper = createMapper(
                 name,
                 position,
                 context.path().pathAsText(name),
@@ -100,6 +100,16 @@ public class ObjectMapper extends Mapper implements Cloneable {
                 mappers,
                 context.indexSettings()
             );
+            if (!(mapper instanceof RootObjectMapper)) {
+                if (position == null) {
+                    assert mapper.mappers.values().stream().allMatch(m -> m.position == null) :
+                        "if an object's position is null, its children's positions should also be null";
+                    context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
+                } else {
+                    context.getColumnPositionResolver().updateMaxColumnPosition(position);
+                }
+            }
+            return mapper;
         }
 
         protected ObjectMapper createMapper(String name,
@@ -222,8 +232,6 @@ public class ObjectMapper extends Mapper implements Cloneable {
         }
 
     }
-
-    private final Integer position;
 
     private final String fullPath;
 

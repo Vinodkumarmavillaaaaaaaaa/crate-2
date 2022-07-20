@@ -70,6 +70,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import io.crate.common.collections.Maps;
+import io.crate.metadata.IndexParts;
 
 /**
  * Represents the current state of the cluster.
@@ -857,8 +858,11 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
                 for (var indexMetadata : metadata.indices().values()) {
                     String templateName = indexTemplateMetadata.value.name();
                     String indexName = indexMetadata.value.getIndex().getName();
+                    if (IndexParts.isPartitioned(indexName) == false) {
+                        continue;
+                    }
                     templateName = templateName.split("\\.")[templateName.split("\\.").length - 1];
-                    indexName = indexName.split("\\.")[indexName.split("\\.").length - 1];
+                    indexName = indexName.split("\\.")[indexName.split("\\.").length - 2];
                     if (templateName.equals(indexName)) {
                         validateConsistentColumnPositions(
                             XContentHelper.convertToMap(templateMapping.value.compressedReference(), true).v2(),
@@ -919,10 +923,15 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
         }
         for (var e : indexProperties.entrySet()) {
             String key = e.getKey();
-            Map<String, Object> templateColumnProperties = (Map<String, Object>) indexProperties.get(key);
+            Map<String, Object> templateColumnProperties = (Map<String, Object>) templateProperties.get(key);
             Map<String, Object> indexColumnProperties = (Map<String, Object>) e.getValue();
             if (indexColumnProperties == null) {
                 throw new AssertionError("columns in index-mapping should be available in template-mapping");
+            }
+            if (templateColumnProperties == null) {
+                // template is not superset of indexmapping anymore.
+                continue;
+                //throw new AssertionError("why??");
             }
 
             templateColumnProperties = furtherColumnProperties(templateColumnProperties);

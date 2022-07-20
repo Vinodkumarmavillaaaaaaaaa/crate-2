@@ -150,7 +150,7 @@ public class TextFieldMapper extends FieldMapper {
         @Override
         public TextFieldMapper build(BuilderContext context) {
             TextFieldType tft = buildFieldType(context);
-            return new TextFieldMapper(
+            var mapper = new TextFieldMapper(
                 name,
                 position,
                 defaultExpression,
@@ -159,6 +159,12 @@ public class TextFieldMapper extends FieldMapper {
                 context.indexSettings(),
                 copyTo
             );
+            if (position == null) {
+                context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
+            } else {
+                context.getColumnPositionResolver().updateMaxColumnPosition(position);
+            }
+            return mapper;
         }
 
 

@@ -28,6 +28,8 @@ import org.elasticsearch.common.settings.Settings;
 
 public class RootObjectMapper extends ObjectMapper {
 
+    private ColumnPositionResolver columnPositionResolver;
+
     public static class Builder extends ObjectMapper.Builder<Builder> {
 
         public Builder(String name) {
@@ -37,18 +39,22 @@ public class RootObjectMapper extends ObjectMapper {
 
         @Override
         public RootObjectMapper build(BuilderContext context) {
-            return (RootObjectMapper) super.build(context);
+            var rootObjectMapper = (RootObjectMapper) super.build(context);
+            rootObjectMapper.columnPositionResolver = context.getColumnPositionResolver();
+            return rootObjectMapper;
         }
 
         @Override
         protected ObjectMapper createMapper(String name, Integer position, String fullPath, Dynamic dynamic,
                 Map<String, Mapper> mappers, @Nullable Settings settings) {
-            return new RootObjectMapper(
+            var mapper = new RootObjectMapper(
                 name,
                 dynamic,
                 mappers,
                 settings
             );
+            mapper.columnPositionResolver = new ColumnPositionResolver();
+            return mapper;
         }
     }
 
@@ -79,6 +85,11 @@ public class RootObjectMapper extends ObjectMapper {
 
     @Override
     public RootObjectMapper merge(Mapper mergeWith) {
-        return (RootObjectMapper) super.merge(mergeWith);
+        RootObjectMapper newMapper = (RootObjectMapper) super.merge(mergeWith);
+        if (mergeWith instanceof RootObjectMapper rootObjectMapper) {
+            newMapper.columnPositionResolver =
+                this.columnPositionResolver.resolve(rootObjectMapper.columnPositionResolver);
+        }
+        return newMapper;
     }
 }

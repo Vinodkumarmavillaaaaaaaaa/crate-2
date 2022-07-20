@@ -25,21 +25,27 @@ import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.index.analysis.IndexAnalyzers;
 import org.elasticsearch.index.query.QueryShardContext;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import javax.annotation.Nonnull;
 
 public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
     public static class BuilderContext {
         private final Settings indexSettings;
         private final ContentPath contentPath;
+        private final Mapper.ColumnPositionResolver columnPositionResolver;
 
         public BuilderContext(Settings indexSettings, ContentPath contentPath) {
             Objects.requireNonNull(indexSettings, "indexSettings is required");
             this.contentPath = contentPath;
             this.indexSettings = indexSettings;
+            this.columnPositionResolver = new Mapper.ColumnPositionResolver();
         }
 
         public ContentPath path() {
@@ -52,6 +58,10 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
         public Version indexCreatedVersion() {
             return Version.indexCreated(indexSettings);
+        }
+
+        public Mapper.ColumnPositionResolver getColumnPositionResolver() {
+            return columnPositionResolver;
         }
     }
 
@@ -125,6 +135,8 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
     private final String simpleName;
 
+    protected Integer position;
+
     public Mapper(String simpleName) {
         Objects.requireNonNull(simpleName);
         this.simpleName = simpleName;
@@ -147,4 +159,35 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
     /** Return the merge of {@code mergeWith} into this.
      *  Both {@code this} and {@code mergeWith} will be left unmodified. */
     public abstract Mapper merge(Mapper mergeWith);
+
+    static class ColumnPositionResolver {
+        private final Map<Integer, Mapper> unpositionedMappers = new TreeMap<>(Comparator.naturalOrder());
+        private int maxColumnPosition = 0;
+
+        public ColumnPositionResolver resolve(@Nonnull ColumnPositionResolver toResolve) {
+            // only toResolve needs to hold a list of mappers to resolve the col positions
+            assert this.unpositionedMappers.size() == 0;
+            int maxColumnPosition = Math.max(this.maxColumnPosition, toResolve.maxColumnPosition);
+            for (var e : toResolve.unpositionedMappers.values()) {
+                e.position = ++maxColumnPosition;
+            }
+
+            var merged = new ColumnPositionResolver();
+            merged.maxColumnPosition = maxColumnPosition;
+            return merged;
+        }
+
+        public void addUnpositionedMapper(BuilderContext context, Mapper mapper) {
+            this.unpositionedMappers.put(
+                // mappers are input in depth first order but want to convert it to
+                // breadth-first, then insertion order second. This way, parent's position < children's positions.
+                // If the number of unpositioned mappers are > 1000, this may break.
+                context.contentPath.currentDepth() * 1000 + this.unpositionedMappers.size(),
+                mapper);
+        }
+
+        public void updateMaxColumnPosition(@Nonnull Integer columnPosition) {
+            this.maxColumnPosition = Math.max(maxColumnPosition, columnPosition);
+        }
+    }
 }

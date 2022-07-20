@@ -40,6 +40,7 @@ import io.crate.Constants;
 import io.crate.common.collections.Maps;
 import io.crate.common.unit.TimeValue;
 import io.crate.common.io.IOUtils;
+import io.crate.metadata.IndexParts;
 import io.crate.metadata.PartitionName;
 
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -274,6 +275,19 @@ public class MetadataMappingService {
                 // do the actual merge here on the master, and update the mapping source
                 // we use the exact same indexService and metadata we used to validate above here to actually apply the update
                 final Index index = indexMetadata.getIndex();
+
+                Map<String, Object> updatedSourceMap = null;
+                if (IndexParts.isPartitioned(index.getName())) {
+                    String partitionName = PartitionName.templateName(index.getName());
+                    IndexTemplateMetadata indexTemplateMetadata = currentState.metadata().templates().get(partitionName);
+                    updatedSourceMap = XContentHelper.convertToMap(mappingUpdateSource.compressedReference(), true).v2();
+                    populateColumnPositions(updatedSourceMap, findMaxColumnPosition(updatedSourceMap),
+                        // if partitioned, template-mapping should contain the latest column positions
+                        indexTemplateMetadata.mappings().get(Constants.DEFAULT_MAPPING_TYPE)
+                    );
+                }
+
+
                 final MapperService mapperService = indexMapperServices.get(index);
 
                 CompressedXContent existingSource = null;
@@ -281,9 +295,10 @@ public class MetadataMappingService {
                 if (existingMapper != null) {
                     existingSource = existingMapper.mappingSource();
                 }
-                Map<String, Object> updatedSourceMap = populateColumnPositions(mappingUpdateSource, existingSource, index, currentState);
-                DocumentMapper mergedMapper
-                    = mapperService.merge(updatedSourceMap, MergeReason.MAPPING_UPDATE);
+                DocumentMapper mergedMapper =
+                    (updatedSourceMap == null /* if partitioned */) ?
+                        mapperService.merge(mappingUpdateSource, MergeReason.MAPPING_UPDATE) :
+                        mapperService.merge(updatedSourceMap, MergeReason.MAPPING_UPDATE);
                 CompressedXContent updatedSource = mergedMapper.mappingSource();
 
                 if (existingSource != null) {
@@ -367,45 +382,6 @@ public class MetadataMappingService {
                         return request.ackTimeout();
                     }
                 });
-    }
-
-    private Map<String, Object> populateColumnPositions(CompressedXContent mappingUpdateSource,
-                                                        CompressedXContent existingSource,
-                                                        Index index,
-                                                        ClusterState currentState) {
-        Map<String, Object> updatedSourceMap = XContentHelper.convertToMap(mappingUpdateSource.compressedReference(), true).v2();
-        Map<String, Object> existingSourceMap = null;
-        if (existingSource != null) {
-            existingSourceMap = XContentHelper.convertToMap(existingSource.compressedReference(), true).v2();
-        }
-        try {
-            String partitionName = PartitionName.templateName(index.getName());
-            IndexTemplateMetadata indexTemplateMetadata = currentState.metadata().templates().get(partitionName);
-            populateColumnPositions(
-                Maps.getOrDefault(updatedSourceMap, "default", Map.of()),
-                findMaxColumnPosition(Maps.getOrDefault(
-                    // maxColumnPosition of template mappings cannot be used here because an index is a subset of the template
-                    // existingSourceMap contains the latest column positions, if unavailable use updatedSourceMap
-                    existingSourceMap == null ? updatedSourceMap : existingSourceMap,
-                    "default",
-                    Map.of()
-                )),
-                // if partitioned, template-mapping should contain the latest column positions
-                indexTemplateMetadata.mappings().get(Constants.DEFAULT_MAPPING_TYPE)
-            );
-        } catch (Exception e) {
-            populateColumnPositions(
-                Maps.getOrDefault(updatedSourceMap, "default", Map.of()),
-                findMaxColumnPosition(Maps.getOrDefault(
-                    existingSourceMap == null ? updatedSourceMap : existingSourceMap,
-                    "default",
-                    Map.of()
-                )),
-                // if not partitioned, existingSource should contain the latest column positions
-                existingSource
-            );
-        }
-        return updatedSourceMap;
     }
 
     private void populateColumnPositions(Map<String, Object> mapping, Integer maxPosition, CompressedXContent mappingToReference) {

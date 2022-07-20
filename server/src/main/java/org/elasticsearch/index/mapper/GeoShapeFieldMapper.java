@@ -139,7 +139,7 @@ public class GeoShapeFieldMapper extends FieldMapper {
                 distanceErrorPct,
                 orientation
             );
-            return new GeoShapeFieldMapper(
+            var mapper = new GeoShapeFieldMapper(
                 name,
                 position,
                 defaultExpression,
@@ -148,6 +148,12 @@ public class GeoShapeFieldMapper extends FieldMapper {
                 context.indexSettings(),
                 copyTo
             );
+            if (position == null) {
+                context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
+            } else {
+                context.getColumnPositionResolver().updateMaxColumnPosition(position);
+            }
+            return mapper;
         }
 
 

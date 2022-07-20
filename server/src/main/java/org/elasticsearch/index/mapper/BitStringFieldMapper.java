@@ -98,7 +98,7 @@ public class BitStringFieldMapper extends FieldMapper {
 
         @Override
         public BitStringFieldMapper build(BuilderContext context) {
-            return new BitStringFieldMapper(
+            var newMapper = new BitStringFieldMapper(
                 name,
                 position,
                 length,
@@ -107,6 +107,12 @@ public class BitStringFieldMapper extends FieldMapper {
                 new BitStringFieldType(name, true, true),
                 context.indexSettings(),
                 copyTo);
+            if (position == null) {
+                context.getColumnPositionResolver().addUnpositionedMapper(context, newMapper);
+            } else {
+                context.getColumnPositionResolver().updateMaxColumnPosition(position);
+            }
+            return newMapper;
         }
 
         public void length(Integer length) {

@@ -23,7 +23,6 @@ package io.crate.analyze;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.StreamSupport;
 
 import javax.annotation.Nullable;
 
@@ -32,8 +31,6 @@ import io.crate.metadata.ColumnIdent;
 import io.crate.metadata.IndexType;
 import io.crate.metadata.Reference;
 import io.crate.metadata.RelationName;
-import io.crate.metadata.doc.DocSysColumns;
-import io.crate.metadata.doc.DocTableInfo;
 import io.crate.metadata.table.TableInfo;
 import io.crate.sql.tree.AddColumnDefinition;
 import io.crate.sql.tree.CheckColumnConstraint;
@@ -61,26 +58,24 @@ public class TableElementsAnalyzer {
 
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
-                                                       @Nullable DocTableInfo tableInfo, boolean calculatePositions) {
+                                                       @Nullable TableInfo tableInfo,
+                                                       boolean calculatePositions) {
         return analyze(tableElements, relationName, tableInfo, true, calculatePositions);
     }
 
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
-                                                       @Nullable DocTableInfo tableInfo,
+                                                       @Nullable TableInfo tableInfo,
                                                        boolean logWarnings,
                                                        boolean calculatePositions) {
+        // ADD COLUMN sets calculatePositions = false, requiring column positions to be calculated atomically later on.
         AnalyzedTableElements<T> analyzedTableElements = new AnalyzedTableElements<>();
-        Integer positionOffset = calculatePositions ? (tableInfo == null ? 0 :
-            StreamSupport.stream(tableInfo.spliterator(), false)
-                .filter(r -> !DocSysColumns.COLUMN_IDENTS.containsKey(r.ident().columnIdent()))
-                .mapToInt(Reference::position).max().orElse(0) +
-            tableInfo.indexColumns().size()) : null;
-        InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>(calculatePositions);
+        Integer positionOffset = calculatePositions ? (tableInfo == null ? 0 : tableInfo.columns().size()) : null;
+        InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>();
         for (int i = 0; i < tableElements.size(); i++) {
             TableElement<T> tableElement = tableElements.get(i);
             ColumnDefinitionContext<T> ctx = new ColumnDefinitionContext<>(
-                calculatePositions ? positionOffset + 1 : null,
+                positionOffset != null ? positionOffset + 1 : null,
                 null,
                 analyzedTableElements,
                 relationName,
@@ -104,9 +99,10 @@ public class TableElementsAnalyzer {
         @Nullable
         final TableInfo tableInfo;
         final boolean logWarnings;
+        @Nullable
         Integer currentColumnPosition;
 
-        ColumnDefinitionContext(Integer position,
+        ColumnDefinitionContext(@Nullable Integer position,
                                 @Nullable AnalyzedColumnDefinition<T> parent,
                                 AnalyzedTableElements<T> analyzedTableElements,
                                 RelationName relationName,
@@ -119,19 +115,9 @@ public class TableElementsAnalyzer {
             this.logWarnings = logWarnings;
             this.currentColumnPosition = position;
         }
-
-        public void increaseCurrentPosition() {
-            currentColumnPosition++;
-        }
     }
 
     private static class InnerTableElementsAnalyzer<T> extends DefaultTraversalVisitor<Void, ColumnDefinitionContext<T>> {
-
-        private final boolean calculatePositions;
-
-        InnerTableElementsAnalyzer(boolean calculatePositions) {
-            this.calculatePositions = calculatePositions;
-        }
 
         @Override
         public Void visitColumnDefinition(ColumnDefinition<?> node, ColumnDefinitionContext<T> context) {
@@ -156,6 +142,7 @@ public class TableElementsAnalyzer {
 
         @Override
         public Void visitAddColumnDefinition(AddColumnDefinition<?> node, ColumnDefinitionContext<T> context) {
+            assert context.currentColumnPosition == null : "ADD COLUMN does not calculate column positions";
             AddColumnDefinition<T> addColumnDefinition = (AddColumnDefinition<T>) node;
             assert addColumnDefinition.name() instanceof Literal : "column name is expected to be a literal already";
             ColumnIdent column = ColumnIdent.fromPath(((Literal) addColumnDefinition.name()).value().toString());
@@ -177,22 +164,16 @@ public class TableElementsAnalyzer {
                     // If it is an array, set the collection type to array, or if it's an object keep the object column
                     // policy.
                     Reference parentRef = context.tableInfo.getReference(parent.ident());
-                    int childrenCnt = 0;
                     if (parentRef != null) {
                         parent.position = parentRef.position();
                         if (parentRef.valueType().id() == ArrayType.ID) {
-                            var childrenType = ((ArrayType) parentRef.valueType()).innerType();
-                            childrenCnt = (childrenType.id() == ObjectType.ID) ? ((ObjectType) childrenType).innerTypes().size() : 0;
                             parent.collectionType(ArrayType.NAME);
                         } else {
-                            childrenCnt = ((ObjectType) parentRef.valueType()).innerTypes().size();
                             parent.objectType(parentRef.columnPolicy());
                         }
                     }
                     parent.markAsParentColumn();
-                    int position = parent.position + childrenCnt + 1;
-                    context.currentColumnPosition = position;
-                    leaf = new AnalyzedColumnDefinition<>(position, parent);
+                    leaf = new AnalyzedColumnDefinition<>(null, parent);
                     leaf.name(name);
                     parent.addChild(leaf);
                     parent = leaf;
@@ -229,8 +210,8 @@ public class TableElementsAnalyzer {
             context.analyzedColumnDefinition.objectType(objectColumnType.objectType().orElse(ColumnPolicy.DYNAMIC));
             for (int i = 0; i < objectColumnType.nestedColumns().size(); i++) {
                 ColumnDefinition<T> columnDefinition = objectColumnType.nestedColumns().get(i);
-                if (calculatePositions) {
-                    context.increaseCurrentPosition();
+                if (context.currentColumnPosition != null) {
+                    context.currentColumnPosition++;
                 }
                 ColumnDefinitionContext<T> childContext = new ColumnDefinitionContext<>(
                     context.currentColumnPosition,

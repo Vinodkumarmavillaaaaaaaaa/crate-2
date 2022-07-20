@@ -98,6 +98,7 @@ public class KeywordFieldMapperTest extends CrateDummyClusterServiceUnitTest {
                         .startObject("properties")
                             .startObject("text_col")
                                 .field("type", "keyword")
+                                .field("position", 1)
                                 .field("length_limit", 2)
                             .endObject()
                         .endObject()
