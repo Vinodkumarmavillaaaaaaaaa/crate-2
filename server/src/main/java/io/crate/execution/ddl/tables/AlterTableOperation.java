@@ -79,6 +79,7 @@ public class AlterTableOperation {
 
     private final ClusterService clusterService;
     private final TransportAlterTableAction transportAlterTableAction;
+    private final TransportAddColumnAction transportAddColumnAction;
     private final TransportRenameTableAction transportRenameTableAction;
     private final TransportOpenCloseTableOrPartitionAction transportOpenCloseTableOrPartitionAction;
     private final TransportResizeAction transportResizeAction;
@@ -101,6 +102,7 @@ public class AlterTableOperation {
                                TransportDeleteIndexAction transportDeleteIndexAction,
                                TransportSwapAndDropIndexNameAction transportSwapAndDropIndexNameAction,
                                TransportAlterTableAction transportAlterTableAction,
+                               TransportAddColumnAction transportAddColumnAction,
                                SQLOperations sqlOperations,
                                IndexScopedSettings indexScopedSettings,
                                LogicalReplicationService logicalReplicationService) {
@@ -113,24 +115,15 @@ public class AlterTableOperation {
         this.transportOpenCloseTableOrPartitionAction = transportOpenCloseTableOrPartitionAction;
         this.transportCloseTable = transportCloseTable;
         this.transportAlterTableAction = transportAlterTableAction;
+        this.transportAddColumnAction = transportAddColumnAction;
         this.sqlOperations = sqlOperations;
         this.indexScopedSettings = indexScopedSettings;
         this.logicalReplicationService = logicalReplicationService;
     }
 
-    public CompletableFuture<Long> executeAlterTableAddColumn(final BoundAddColumn analysis) {
+    public CompletableFuture<Long> executeAlterTableAddColumn(BoundAddColumn analysis) {
         if (analysis.newPrimaryKeys() || analysis.hasNewGeneratedColumns()) {
-            RelationName ident = analysis.table().ident();
-            String stmt =
-                String.format(Locale.ENGLISH, "SELECT COUNT(*) FROM \"%s\".\"%s\"", ident.schema(), ident.name());
-
-            var rowCountReceiver = new CollectingResultReceiver<>(Collectors.summingLong(row -> (long) row.get(0)));
-            try {
-                session().quickExec(stmt, rowCountReceiver, Row.EMPTY);
-            } catch (Throwable t) {
-                return CompletableFuture.failedFuture(t);
-            }
-            return rowCountReceiver.completionFuture().thenCompose(rowCount -> {
+            return getRowCount(analysis.table().ident()).thenCompose(rowCount -> {
                 if (rowCount > 0) {
                     String subject = analysis.newPrimaryKeys() ? "primary key" : "generated";
                     throw new UnsupportedOperationException("Cannot add a " + subject + " column to a table that isn't empty");
@@ -141,6 +134,34 @@ public class AlterTableOperation {
         } else {
             return addColumnToTable(analysis);
         }
+    }
+
+    public CompletableFuture<Long> executeAlterTableAddColumn(AddColumnRequest addColumnRequest) {
+        if (addColumnRequest.isPrimaryKey() || addColumnRequest.generatedExpression() != null) {
+            return getRowCount(addColumnRequest.relationName()).thenCompose(rowCount -> {
+                if (rowCount > 0) {
+                    String subject = addColumnRequest.isPrimaryKey() ? "primary key" : "generated";
+                    throw new UnsupportedOperationException("Cannot add a " + subject + " column to a table that isn't empty");
+                } else {
+                    return transportAddColumnAction.execute(addColumnRequest).thenApply(resp -> -1L);
+                }
+            });
+        } else {
+            return transportAddColumnAction.execute(addColumnRequest).thenApply(resp -> -1L);
+        }
+    }
+
+    private CompletableFuture<Long> getRowCount(RelationName ident) {
+        String stmt =
+            String.format(Locale.ENGLISH, "SELECT COUNT(*) FROM \"%s\".\"%s\"", ident.schema(), ident.name());
+
+        var rowCountReceiver = new CollectingResultReceiver<>(Collectors.summingLong(row -> (long) row.get(0)));
+        try {
+            session().quickExec(stmt, rowCountReceiver, Row.EMPTY);
+        } catch (Throwable t) {
+            return CompletableFuture.failedFuture(t);
+        }
+        return rowCountReceiver.completionFuture();
     }
 
     private Session session() {
