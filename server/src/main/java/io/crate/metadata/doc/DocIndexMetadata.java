@@ -747,7 +747,7 @@ public class DocIndexMetadata {
 
         @Override
         public Void visitReference(Reference reference, List<Short> context) {
-            context.add((Short.valueOf((short) reference.position())));
+            context.add(reference.position().shortValue());
             return null;
         }
     }

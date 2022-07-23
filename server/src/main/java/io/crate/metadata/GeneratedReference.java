@@ -194,7 +194,7 @@ public class GeneratedReference implements Reference {
         return ref.granularity();
     }
 
-    public int position() {
+    public Integer position() {
         return ref.position();
     }
 

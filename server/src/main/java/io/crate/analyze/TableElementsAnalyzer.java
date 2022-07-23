@@ -61,26 +61,26 @@ public class TableElementsAnalyzer {
 
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
-                                                       @Nullable DocTableInfo tableInfo) {
-        return analyze(tableElements, relationName, tableInfo, true);
+                                                       @Nullable DocTableInfo tableInfo, boolean calculatePositions) {
+        return analyze(tableElements, relationName, tableInfo, true, calculatePositions);
     }
 
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
                                                        @Nullable DocTableInfo tableInfo,
-                                                       boolean logWarnings) {
+                                                       boolean logWarnings,
+                                                       boolean calculatePositions) {
         AnalyzedTableElements<T> analyzedTableElements = new AnalyzedTableElements<>();
-        int positionOffset = tableInfo == null ? 0 :
+        Integer positionOffset = calculatePositions ? (tableInfo == null ? 0 :
             StreamSupport.stream(tableInfo.spliterator(), false)
                 .filter(r -> !DocSysColumns.COLUMN_IDENTS.containsKey(r.ident().columnIdent()))
                 .mapToInt(Reference::position).max().orElse(0) +
-            tableInfo.indexColumns().size();
-        InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>();
+            tableInfo.indexColumns().size()) : null;
+        InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>(calculatePositions);
         for (int i = 0; i < tableElements.size(); i++) {
             TableElement<T> tableElement = tableElements.get(i);
-            int position = positionOffset + 1;
             ColumnDefinitionContext<T> ctx = new ColumnDefinitionContext<>(
-                position,
+                calculatePositions ? positionOffset + 1 : null,
                 null,
                 analyzedTableElements,
                 relationName,
@@ -104,9 +104,9 @@ public class TableElementsAnalyzer {
         @Nullable
         final TableInfo tableInfo;
         final boolean logWarnings;
-        int currentColumnPosition;
+        Integer currentColumnPosition;
 
-        ColumnDefinitionContext(int position,
+        ColumnDefinitionContext(Integer position,
                                 @Nullable AnalyzedColumnDefinition<T> parent,
                                 AnalyzedTableElements<T> analyzedTableElements,
                                 RelationName relationName,
@@ -126,6 +126,12 @@ public class TableElementsAnalyzer {
     }
 
     private static class InnerTableElementsAnalyzer<T> extends DefaultTraversalVisitor<Void, ColumnDefinitionContext<T>> {
+
+        private final boolean calculatePositions;
+
+        InnerTableElementsAnalyzer(boolean calculatePositions) {
+            this.calculatePositions = calculatePositions;
+        }
 
         @Override
         public Void visitColumnDefinition(ColumnDefinition<?> node, ColumnDefinitionContext<T> context) {
@@ -223,7 +229,9 @@ public class TableElementsAnalyzer {
             context.analyzedColumnDefinition.objectType(objectColumnType.objectType().orElse(ColumnPolicy.DYNAMIC));
             for (int i = 0; i < objectColumnType.nestedColumns().size(); i++) {
                 ColumnDefinition<T> columnDefinition = objectColumnType.nestedColumns().get(i);
-                context.increaseCurrentPosition();
+                if (calculatePositions) {
+                    context.increaseCurrentPosition();
+                }
                 ColumnDefinitionContext<T> childContext = new ColumnDefinitionContext<>(
                     context.currentColumnPosition,
                     context.analyzedColumnDefinition,

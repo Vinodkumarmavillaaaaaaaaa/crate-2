@@ -25,6 +25,7 @@ import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
 import io.crate.Constants;
 import io.crate.common.annotations.VisibleForTesting;
 import io.crate.common.collections.MapBuilder;
+import io.crate.common.collections.Maps;
 import io.crate.metadata.PartitionName;
 import io.crate.metadata.RelationName;
 import org.elasticsearch.ElasticsearchException;
@@ -49,6 +50,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+
+import static io.crate.execution.ddl.TransportSchemaUpdateAction.findMaxColumnPosition;
+import static io.crate.execution.ddl.TransportSchemaUpdateAction.populateColumnPositions;
 
 public class DDLClusterStateHelpers {
 
@@ -137,6 +141,12 @@ public class DDLClusterStateHelpers {
             XContentHelper.update(mergedMapping, (Map) o, false);
         }
         XContentHelper.update(mergedMapping, newMapping, false);
+        Map<String, Object> defaultMap = Maps.get(mergedMapping, "default");
+        if (defaultMap != null) {
+            populateColumnPositions(defaultMap, findMaxColumnPosition(defaultMap));
+        } else {
+            populateColumnPositions(mergedMapping, findMaxColumnPosition(mergedMapping));
+        }
         return mergedMapping;
     }
 

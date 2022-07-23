@@ -43,7 +43,7 @@ public class SimpleReference implements Reference {
 
     protected DataType<?> type;
 
-    private final int position;
+    private final Integer position;
     private final ReferenceIdent ident;
     private final ColumnPolicy columnPolicy;
     private final RowGranularity granularity;
@@ -80,7 +80,7 @@ public class SimpleReference implements Reference {
     public SimpleReference(ReferenceIdent ident,
                            RowGranularity granularity,
                            DataType<?> type,
-                           int position,
+                           Integer position,
                            @Nullable Symbol defaultExpression) {
         this(ident,
              granularity,
@@ -100,7 +100,7 @@ public class SimpleReference implements Reference {
                            IndexType indexType,
                            boolean nullable,
                            boolean hasDocValues,
-                           int position,
+                           Integer position,
                            @Nullable Symbol defaultExpression) {
         this.position = position;
         this.ident = ident;
@@ -186,7 +186,7 @@ public class SimpleReference implements Reference {
         return hasDocValues;
     }
 
-    public int position() {
+    public Integer position() {
         return position;
     }
 

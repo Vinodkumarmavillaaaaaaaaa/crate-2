@@ -77,7 +77,7 @@ public class ConstraintInfo {
     private static List<Short> getConstraintColumnIndices(RelationInfo relationInfo, String constraintName, Type constraintType) {
         if (relationInfo instanceof TableInfo tableInfo) {
             if (constraintType == Type.PRIMARY_KEY) {
-                return relationInfo.primaryKey().stream().map(column -> (short) tableInfo.getReference(column).position()).collect(Collectors.toList());
+                return relationInfo.primaryKey().stream().map(column -> tableInfo.getReference(column).position().shortValue()).collect(Collectors.toList());
             } else if (constraintType == Type.CHECK) {
                 return tableInfo.checkConstraints().stream()
                     .filter(checkConstraint -> checkConstraint.name().equals(constraintName))
