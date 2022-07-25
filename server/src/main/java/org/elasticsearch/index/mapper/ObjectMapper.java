@@ -24,7 +24,9 @@ import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeIn
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -368,8 +370,17 @@ public class ObjectMapper extends Mapper implements Cloneable {
             custom.toXContent(builder, params);
         }
 
+        // sort the mappers so we get consistent serialization format
+        Mapper[] sortedMappers = mappers.values().stream().toArray(size -> new Mapper[size]);
+        Arrays.sort(sortedMappers, new Comparator<Mapper>() {
+            @Override
+            public int compare(Mapper o1, Mapper o2) {
+                return o1.name().compareTo(o2.name());
+            }
+        });
+
         int count = 0;
-        for (Mapper mapper : mappers.values()) {
+        for (Mapper mapper : sortedMappers) {
             if (!(mapper instanceof MetadataFieldMapper)) {
                 if (count++ == 0) {
                     builder.startObject("properties");
