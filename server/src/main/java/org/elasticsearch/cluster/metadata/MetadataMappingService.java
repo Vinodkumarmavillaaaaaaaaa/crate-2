@@ -280,7 +280,7 @@ public class MetadataMappingService {
                 if (IndexParts.isPartitioned(index.getName())) {
                     String partitionName = PartitionName.templateName(index.getName());
                     IndexTemplateMetadata indexTemplateMetadata = currentState.metadata().templates().get(partitionName);
-                    updatedSourceMap = XContentHelper.convertToMap(mappingUpdateSource.compressedReference(), true).v2();
+                    updatedSourceMap = XContentHelper.convertToMap(mappingUpdateSource.compressedReference(), true).map();
                     populateColumnPositions(updatedSourceMap, findMaxColumnPosition(updatedSourceMap),
                         // if partitioned, template-mapping should contain the latest column positions
                         indexTemplateMetadata.mappings().get(Constants.DEFAULT_MAPPING_TYPE)
@@ -385,7 +385,7 @@ public class MetadataMappingService {
     }
 
     private void populateColumnPositions(Map<String, Object> mapping, Integer maxPosition, CompressedXContent mappingToReference) {
-        Map<String, Object> parsedTemplateMapping = XContentHelper.convertToMap(mappingToReference.compressedReference(), true).v2();
+        Map<String, Object> parsedTemplateMapping = XContentHelper.convertToMap(mappingToReference.compressedReference(), true).map();
 
         populateColumnPositionsImpl(
             Maps.getOrDefault(mapping, "default", mapping),

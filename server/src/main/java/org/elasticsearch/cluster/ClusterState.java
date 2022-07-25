@@ -849,7 +849,7 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
         // validate IndexTemplateMetadata
         for (var indexTemplateMetadata : metadata.templates().values()) {
             for (var mapping : indexTemplateMetadata.value.mappings()) {
-                validateColumnPositions(XContentHelper.convertToMap(mapping.value.compressedReference(), true).v2());
+                validateColumnPositions(XContentHelper.convertToMap(mapping.value.compressedReference(), true).map());
             }
         }
 
@@ -865,9 +865,9 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
                     indexName = indexName.split("\\.")[indexName.split("\\.").length - 2];
                     if (templateName.equals(indexName)) {
                         validateConsistentColumnPositions(
-                            XContentHelper.convertToMap(templateMapping.value.compressedReference(), true).v2(),
+                            XContentHelper.convertToMap(templateMapping.value.compressedReference(), true).map(),
                             XContentHelper.convertToMap(indexMetadata.value.mapping().source().compressedReference(),
-                                                        true).v2()
+                                                        true).map()
                         );
                     }
                 }

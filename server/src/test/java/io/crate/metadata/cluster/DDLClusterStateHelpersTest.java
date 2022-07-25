@@ -57,7 +57,7 @@ public class DDLClusterStateHelpersTest {
             .endObject();
 
         Map<String, Object> oldMapping =
-            XContentHelper.convertToMap(BytesReference.bytes(oldMappingBuilder), true, XContentType.JSON).v2();
+            XContentHelper.convertToMap(BytesReference.bytes(oldMappingBuilder), true, XContentType.JSON).map();
 
         XContentBuilder newMappingBuilder = XContentFactory.jsonBuilder()
             .startObject()
@@ -77,7 +77,7 @@ public class DDLClusterStateHelpersTest {
             .endObject();
 
         Map<String, Object> newMapping =
-            XContentHelper.convertToMap(BytesReference.bytes(newMappingBuilder), true, XContentType.JSON).v2();
+            XContentHelper.convertToMap(BytesReference.bytes(newMappingBuilder), true, XContentType.JSON).map();
 
         Map<String, Object> mapping = DDLClusterStateHelpers.mergeTemplateMapping(
             IndexTemplateMetadata.builder("foo")
