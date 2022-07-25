@@ -63,12 +63,16 @@ public class TableElementsAnalyzer {
         return analyze(tableElements, relationName, tableInfo, true, calculatePositions);
     }
 
+    /**
+     * Analyzes table elements.
+     * @param calculatePositions When this is set to false, position will be set to null.
+     *                           For ADD COLUMN, it should be set to false in order to calculate the column positions atomically later on.
+     */
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
                                                        @Nullable TableInfo tableInfo,
                                                        boolean logWarnings,
                                                        boolean calculatePositions) {
-        // ADD COLUMN sets calculatePositions = false, requiring column positions to be calculated atomically later on.
         AnalyzedTableElements<T> analyzedTableElements = new AnalyzedTableElements<>();
         Integer positionOffset = calculatePositions ? (tableInfo == null ? 0 : tableInfo.columns().size()) : null;
         InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>();
