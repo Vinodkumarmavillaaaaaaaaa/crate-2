@@ -46,7 +46,7 @@ public interface Reference extends Symbol {
 
     RowGranularity granularity();
 
-    Integer position();
+    int position();
 
     boolean hasDocValues();
 

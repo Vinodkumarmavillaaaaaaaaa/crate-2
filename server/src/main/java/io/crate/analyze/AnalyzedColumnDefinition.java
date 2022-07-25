@@ -71,7 +71,7 @@ public class AnalyzedColumnDefinition<T> {
     private static final String COLUMN_STORE_PROPERTY = "columnstore";
 
     private final AnalyzedColumnDefinition<T> parent;
-    public Integer position;
+    public int position;
     private ColumnIdent ident;
     private String name;
     private DataType dataType;
@@ -113,13 +113,13 @@ public class AnalyzedColumnDefinition<T> {
     @Nullable
     private T defaultExpression;
 
-    public AnalyzedColumnDefinition(Integer position, @Nullable AnalyzedColumnDefinition<T> parent) {
+    public AnalyzedColumnDefinition(int position, @Nullable AnalyzedColumnDefinition<T> parent) {
         this.position = position;
         this.parent = parent;
     }
 
     private AnalyzedColumnDefinition(AnalyzedColumnDefinition<T> parent,
-                                     Integer position,
+                                     int position,
                                      ColumnIdent ident,
                                      String name,
                                      DataType dataType,
@@ -420,7 +420,8 @@ public class AnalyzedColumnDefinition<T> {
         addTypeOptions(mapping, definition);
         mapping.put("type", definition.typeNameForESMapping());
 
-        if (definition.position != null && definition.position != 0) {
+        // can be -1 due to AlterTableAddColumnAnalyzer.COLUMN_POSITION_FOR_ADD_COLUMNS
+        if (definition.position > 0) {
             mapping.put("position", definition.position);
         }
         if (definition.indexType == IndexType.NONE) {

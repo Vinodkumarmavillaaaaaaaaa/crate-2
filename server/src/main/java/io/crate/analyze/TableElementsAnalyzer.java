@@ -54,6 +54,8 @@ import io.crate.sql.tree.TableElement;
 import io.crate.types.ArrayType;
 import io.crate.types.ObjectType;
 
+import static io.crate.analyze.AlterTableAddColumnAnalyzer.COLUMN_POSITION_FOR_ADD_COLUMNS;
+
 public class TableElementsAnalyzer {
 
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
@@ -65,7 +67,7 @@ public class TableElementsAnalyzer {
 
     /**
      * Analyzes table elements.
-     * @param calculatePositions When this is set to false, position will be set to null.
+     * @param calculatePositions When this is set to false, position will be set to COLUMN_POSITION_FOR_ADD_COLUMNS.
      *                           For ADD COLUMN, it should be set to false in order to calculate the column positions atomically later on.
      */
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
@@ -74,12 +76,12 @@ public class TableElementsAnalyzer {
                                                        boolean logWarnings,
                                                        boolean calculatePositions) {
         AnalyzedTableElements<T> analyzedTableElements = new AnalyzedTableElements<>();
-        Integer positionOffset = calculatePositions ? (tableInfo == null ? 0 : tableInfo.columns().size()) : null;
+        int positionOffset = tableInfo == null ? 0 : tableInfo.columns().size();
         InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>();
         for (int i = 0; i < tableElements.size(); i++) {
             TableElement<T> tableElement = tableElements.get(i);
             ColumnDefinitionContext<T> ctx = new ColumnDefinitionContext<>(
-                positionOffset != null ? positionOffset + 1 : null,
+                calculatePositions ? positionOffset + 1 : COLUMN_POSITION_FOR_ADD_COLUMNS,
                 null,
                 analyzedTableElements,
                 relationName,
@@ -103,10 +105,9 @@ public class TableElementsAnalyzer {
         @Nullable
         final TableInfo tableInfo;
         final boolean logWarnings;
-        @Nullable
-        Integer currentColumnPosition;
+        int currentColumnPosition;
 
-        ColumnDefinitionContext(@Nullable Integer position,
+        ColumnDefinitionContext(int position,
                                 @Nullable AnalyzedColumnDefinition<T> parent,
                                 AnalyzedTableElements<T> analyzedTableElements,
                                 RelationName relationName,
@@ -146,7 +147,7 @@ public class TableElementsAnalyzer {
 
         @Override
         public Void visitAddColumnDefinition(AddColumnDefinition<?> node, ColumnDefinitionContext<T> context) {
-            assert context.currentColumnPosition == null : "ADD COLUMN does not calculate column positions";
+            assert context.currentColumnPosition == COLUMN_POSITION_FOR_ADD_COLUMNS : "ADD COLUMN should not calculate column positions";
             AddColumnDefinition<T> addColumnDefinition = (AddColumnDefinition<T>) node;
             assert addColumnDefinition.name() instanceof Literal : "column name is expected to be a literal already";
             ColumnIdent column = ColumnIdent.fromPath(((Literal) addColumnDefinition.name()).value().toString());
@@ -177,7 +178,7 @@ public class TableElementsAnalyzer {
                         }
                     }
                     parent.markAsParentColumn();
-                    leaf = new AnalyzedColumnDefinition<>(null, parent);
+                    leaf = new AnalyzedColumnDefinition<>(COLUMN_POSITION_FOR_ADD_COLUMNS, parent);
                     leaf.name(name);
                     parent.addChild(leaf);
                     parent = leaf;
@@ -214,7 +215,7 @@ public class TableElementsAnalyzer {
             context.analyzedColumnDefinition.objectType(objectColumnType.objectType().orElse(ColumnPolicy.DYNAMIC));
             for (int i = 0; i < objectColumnType.nestedColumns().size(); i++) {
                 ColumnDefinition<T> columnDefinition = objectColumnType.nestedColumns().get(i);
-                if (context.currentColumnPosition != null) {
+                if (context.currentColumnPosition != COLUMN_POSITION_FOR_ADD_COLUMNS) {
                     context.currentColumnPosition++;
                 }
                 ColumnDefinitionContext<T> childContext = new ColumnDefinitionContext<>(
