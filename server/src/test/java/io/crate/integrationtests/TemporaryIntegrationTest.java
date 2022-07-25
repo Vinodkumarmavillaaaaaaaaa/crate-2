@@ -36,6 +36,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TemporaryIntegrationTest extends SQLIntegrationTestCase {
 
     @Test
+    public void test_named_index_assigned_column_position() {
+        execute("""
+                    CREATE TABLE tbl (
+                     author TEXT NOT NULL,
+                     INDEX author_ft USING FULLTEXT (author) WITH (analyzer = 'standard')
+                   );
+                    """);
+        execute("ALTER TABLE tbl ADD COLUMN dummy text NOT NULL");
+        execute("alter table tbl add column dummy2 text index using fulltext with (analyzer = 'standard')");
+        execute("alter table tbl add column dummy3 int generated always as (char_length(author))");
+        execute("select column_name, ordinal_position from information_schema.columns where table_name = 'tbl'");
+        assertThat(printedTable(response.rows())).isEqualTo("""
+                                                                author| 1
+                                                                dummy| 3
+                                                                dummy2| 4
+                                                                dummy3| 5
+                                                                """);
+    }
+    @Test
     public void test_issue_12630() {
         execute("""
                     CREATE TABLE IF NOT EXISTS "doc"."testing" (
@@ -128,6 +147,20 @@ public class TemporaryIntegrationTest extends SQLIntegrationTestCase {
                                                          ta| 2
                                                          """);
 
+        execute("alter table t add column ta['q']['r']['s'] int;");
+        execute("""
+                    select column_name, ordinal_position
+                    from information_schema.columns
+                    where table_name = 't'
+                    order by 2""");
+        assertThat(printedTable(response.rows())).isEqualTo("""
+                                                               tb| 1
+                                                               ta| 2
+                                                               ta['q']| 3
+                                                               ta['q']['r']| 4
+                                                               ta['q']['r']['s']| 5
+                                                                """);
+
         // dynamic insert 1
         execute("insert into t (tc, ta) values ([1,2,3], {td = 1, te = {tf = false}})");
         execute("""
@@ -136,13 +169,16 @@ public class TemporaryIntegrationTest extends SQLIntegrationTestCase {
                     where table_name = 't'
                     order by 2""");
         assertThat(printedTable(response.rows())).isEqualTo("""
-                                                         tb| 1
-                                                         ta| 2
-                                                         tc| 3
-                                                         ta['td']| 4
-                                                         ta['te']| 5
-                                                         ta['te']['tf']| 6
-                                                         """); // TODO: fix the order!
+                                                             tb| 1
+                                                             ta| 2
+                                                             ta['q']| 3
+                                                             ta['q']['r']| 4
+                                                             ta['q']['r']['s']| 5
+                                                             tc| 6
+                                                             ta['td']| 7
+                                                             ta['te']| 8
+                                                             ta['te']['tf']| 9
+                                                                """);
 
         // dynamic insert 2
         execute("insert into t (td, tb, ta, tz) values (2, [{t1 = 1, t2 = 2}, {t3 = 3}], {te = {ti = 5}}, 'z')");
@@ -153,18 +189,21 @@ public class TemporaryIntegrationTest extends SQLIntegrationTestCase {
                     where table_name = 't'
                     order by 2""");
         assertThat(printedTable(response.rows())).isEqualTo("""
-                                                           tb| 1
-                                                           ta| 2
-                                                           tc| 3
-                                                           ta['td']| 4
-                                                           ta['te']| 5
-                                                           ta['te']['tf']| 6
-                                                           tz| 7
-                                                           td| 8
-                                                           tb['t1']| 9
-                                                           tb['t2']| 10
-                                                           tb['t3']| 11
-                                                           ta['te']['ti']| 12
+                                                              tb| 1
+                                                              ta| 2
+                                                              ta['q']| 3
+                                                              ta['q']['r']| 4
+                                                              ta['q']['r']['s']| 5
+                                                              tc| 6
+                                                              ta['td']| 7
+                                                              ta['te']| 8
+                                                              ta['te']['tf']| 9
+                                                              td| 10
+                                                              tz| 11
+                                                              tb['t1']| 12
+                                                              tb['t2']| 13
+                                                              tb['t3']| 14
+                                                              ta['te']['ti']| 15
                                                                 """);
     }
 
