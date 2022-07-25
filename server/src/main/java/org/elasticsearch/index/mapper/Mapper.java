@@ -161,7 +161,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
     public abstract Mapper merge(Mapper mergeWith);
 
     static class ColumnPositionResolver {
-        private final Map<Integer, Mapper> unpositionedMappers = new TreeMap<>(Comparator.naturalOrder());
+        private final Map<Long, Mapper> unpositionedMappers = new TreeMap<>(Comparator.naturalOrder());
         private int maxColumnPosition = 0;
 
         public ColumnPositionResolver resolve(@Nonnull ColumnPositionResolver toResolve) {
@@ -181,8 +181,10 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             this.unpositionedMappers.put(
                 // mappers are input in depth first order but want to convert it to
                 // breadth-first, then insertion order second. This way, parent's position < children's positions.
-                // If the number of unpositioned mappers are > 1000, this may break.
-                context.contentPath.currentDepth() * 1000 + this.unpositionedMappers.size(),
+                // This implementation relies on the fact that column positions are limited by Integer.MAX_VALUE.
+                // Since Integer.MAX_VALUE * Integer.MAX_VALUE + Integer.MAX_VALUE < Long.MAX_VALUE,
+                // every invocation should have a unique key.
+                (long) context.contentPath.currentDepth() * Integer.MAX_VALUE + this.unpositionedMappers.size(),
                 mapper);
         }
 
