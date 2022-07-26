@@ -22,8 +22,6 @@ package org.elasticsearch.index.mapper;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.elasticsearch.common.settings.Settings;
 
 public class RootObjectMapper extends ObjectMapper {
@@ -39,22 +37,19 @@ public class RootObjectMapper extends ObjectMapper {
 
         @Override
         public RootObjectMapper build(BuilderContext context) {
-            var rootObjectMapper = (RootObjectMapper) super.build(context);
-            rootObjectMapper.columnPositionResolver = context.getColumnPositionResolver();
-            return rootObjectMapper;
+            return (RootObjectMapper) super.build(context);
         }
 
         @Override
         protected ObjectMapper createMapper(String name, Integer position, String fullPath, Dynamic dynamic,
-                Map<String, Mapper> mappers, @Nullable Settings settings) {
-            var mapper = new RootObjectMapper(
+                Map<String, Mapper> mappers, BuilderContext context) {
+            return new RootObjectMapper(
                 name,
                 dynamic,
                 mappers,
-                settings
+                context.indexSettings(),
+                context.getColumnPositionResolver()
             );
-            mapper.columnPositionResolver = new ColumnPositionResolver();
-            return mapper;
         }
     }
 
@@ -79,8 +74,10 @@ public class RootObjectMapper extends ObjectMapper {
     RootObjectMapper(String name,
                      Dynamic dynamic,
                      Map<String, Mapper> mappers,
-                     Settings settings) {
+                     Settings settings,
+                     ColumnPositionResolver columnPositionResolver) {
         super(name, null, name, dynamic, mappers, settings);
+        this.columnPositionResolver = columnPositionResolver;
     }
 
     @Override

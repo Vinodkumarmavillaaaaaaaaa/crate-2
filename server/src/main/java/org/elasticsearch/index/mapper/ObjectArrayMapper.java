@@ -21,7 +21,6 @@
 
 package org.elasticsearch.index.mapper;
 
-import javax.annotation.Nullable;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -61,11 +60,11 @@ public class ObjectArrayMapper extends ObjectMapper {
                                             String fullPath,
                                             Dynamic dynamic,
                                             Map<String, Mapper> mappers,
-                                            @Nullable Settings settings) {
+                                            BuilderContext context) {
             return new ObjectArrayMapper(
                 name,
-                super.createMapper(name, position, fullPath, dynamic, mappers, settings),
-                settings
+                super.createMapper(name, position, fullPath, dynamic, mappers, context),
+                context.indexSettings()
             );
         }
     }

@@ -60,6 +60,14 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             return Version.indexCreated(indexSettings);
         }
 
+        public void putPositionInfo(Mapper mapper, Integer position) {
+            if (position == null) {
+                this.columnPositionResolver.addUnpositionedMapper(mapper, contentPath.currentDepth());
+            } else {
+                this.columnPositionResolver.updateMaxColumnPosition(position);
+            }
+        }
+
         public Mapper.ColumnPositionResolver getColumnPositionResolver() {
             return columnPositionResolver;
         }
@@ -164,7 +172,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
         private final Map<Long, Mapper> unpositionedMappers = new TreeMap<>(Comparator.naturalOrder());
         private int maxColumnPosition = 0;
 
-        public ColumnPositionResolver resolve(@Nonnull ColumnPositionResolver toResolve) {
+        ColumnPositionResolver resolve(@Nonnull ColumnPositionResolver toResolve) {
             // only toResolve needs to hold a list of mappers to resolve the col positions
             assert this.unpositionedMappers.size() == 0;
             int maxColumnPosition = Math.max(this.maxColumnPosition, toResolve.maxColumnPosition);
@@ -177,18 +185,18 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             return merged;
         }
 
-        public void addUnpositionedMapper(BuilderContext context, Mapper mapper) {
+        private void addUnpositionedMapper(Mapper mapper, int depth) {
             this.unpositionedMappers.put(
-                // mappers are input in depth first order but want to convert it to
-                // breadth-first, then insertion order second. This way, parent's position < children's positions.
-                // This implementation relies on the fact that column positions are limited by Integer.MAX_VALUE.
-                // Since Integer.MAX_VALUE * Integer.MAX_VALUE + Integer.MAX_VALUE < Long.MAX_VALUE,
-                // every invocation should have a unique key.
-                (long) context.contentPath.currentDepth() * Integer.MAX_VALUE + this.unpositionedMappers.size(),
+                // mappers are input in depth first order but want to convert it to breadth first order.
+                // That way, parent's position < children's positions.
+
+                // Below calculates a unique key for each unpositioned mappers.
+                // Integer.MAX_VALUE * Integer.MAX_VALUE + Integer.MAX_VALUE < Long.MAX_VALUE 
+                (long) depth * Integer.MAX_VALUE + this.unpositionedMappers.size(),
                 mapper);
         }
 
-        public void updateMaxColumnPosition(@Nonnull Integer columnPosition) {
+        private void updateMaxColumnPosition(@Nonnull Integer columnPosition) {
             this.maxColumnPosition = Math.max(maxColumnPosition, columnPosition);
         }
     }

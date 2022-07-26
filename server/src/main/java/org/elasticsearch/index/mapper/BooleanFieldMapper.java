@@ -76,11 +76,7 @@ public class BooleanFieldMapper extends FieldMapper {
                 new BooleanFieldType(buildFullName(context), indexed, hasDocValues),
                 context.indexSettings(),
                 copyTo);
-            if (position == null) {
-                context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
-            } else {
-                context.getColumnPositionResolver().updateMaxColumnPosition(position);
-            }
+            context.putPositionInfo(mapper, position);
             return mapper;
         }
     }

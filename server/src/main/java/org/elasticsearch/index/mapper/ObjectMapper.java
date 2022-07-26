@@ -32,8 +32,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.collect.CopyOnWriteHashMap;
 import org.elasticsearch.common.settings.Settings;
@@ -100,16 +98,12 @@ public class ObjectMapper extends Mapper implements Cloneable {
                 context.path().pathAsText(name),
                 dynamic,
                 mappers,
-                context.indexSettings()
+                context
             );
             if (!(mapper instanceof RootObjectMapper)) {
-                if (position == null) {
-                    assert mapper.mappers.values().stream().allMatch(m -> m.position == null) :
-                        "if an object's position is null, its children's positions should also be null";
-                    context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
-                } else {
-                    context.getColumnPositionResolver().updateMaxColumnPosition(position);
-                }
+                context.putPositionInfo(mapper, position);
+                assert position != null || mapper.mappers.values().stream().allMatch(m -> m.position == null) :
+                    "if an object's position is null, its children's positions should also be null";
             }
             return mapper;
         }
@@ -119,8 +113,8 @@ public class ObjectMapper extends Mapper implements Cloneable {
                                             String fullPath,
                                             Dynamic dynamic,
                                             Map<String, Mapper> mappers,
-                                            @Nullable Settings settings) {
-            return new ObjectMapper(name, position, fullPath, dynamic, mappers, settings);
+                                            BuilderContext context) {
+            return new ObjectMapper(name, position, fullPath, dynamic, mappers, context.indexSettings());
         }
 
         public T position(int position) {

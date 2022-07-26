@@ -76,11 +76,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
                 ft,
                 context.indexSettings(),
                 copyTo);
-            if (position == null) {
-                context.getColumnPositionResolver().addUnpositionedMapper(context, mapper);
-            } else {
-                context.getColumnPositionResolver().updateMaxColumnPosition(position);
-            }
+            context.putPositionInfo(mapper, position);
             return mapper;
         }
     }
