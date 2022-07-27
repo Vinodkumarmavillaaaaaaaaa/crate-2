@@ -25,10 +25,11 @@ import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.index.analysis.IndexAnalyzers;
 import org.elasticsearch.index.query.QueryShardContext;
 
-import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -169,7 +170,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
     public abstract Mapper merge(Mapper mergeWith);
 
     static class ColumnPositionResolver {
-        private final Map<Long, Mapper> unpositionedMappers = new TreeMap<>(Comparator.naturalOrder());
+        private final Map<Integer, List<Mapper>> unpositionedMappers = new HashMap<>();
         private int maxColumnPosition = 0;
 
         ColumnPositionResolver resolve(@Nonnull ColumnPositionResolver toResolve) {
@@ -177,7 +178,9 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             assert this.unpositionedMappers.size() == 0;
             int maxColumnPosition = Math.max(this.maxColumnPosition, toResolve.maxColumnPosition);
             for (var e : toResolve.unpositionedMappers.values()) {
-                e.position = ++maxColumnPosition;
+                for (Mapper unpositionedMapper : e) {
+                    unpositionedMapper.position = ++maxColumnPosition;
+                }
             }
 
             var merged = new ColumnPositionResolver();
@@ -186,14 +189,16 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
         }
 
         private void addUnpositionedMapper(Mapper mapper, int depth) {
-            this.unpositionedMappers.put(
-                // mappers are input in depth first order but want to convert it to breadth first order.
-                // That way, parent's position < children's positions.
-
-                // Below calculates a unique key for each unpositioned mappers.
-                // Integer.MAX_VALUE * Integer.MAX_VALUE + Integer.MAX_VALUE < Long.MAX_VALUE 
-                (long) depth * Integer.MAX_VALUE + this.unpositionedMappers.size(),
-                mapper);
+            // mappers are input in depth first order but want to convert it to breadth first order.
+            // That way, parent's position < children's positions.
+            List<Mapper> mappersPerDepths = unpositionedMappers.get(depth);
+            if (mappersPerDepths == null) {
+                List<Mapper> mapperList = new ArrayList<>();
+                mapperList.add(mapper);
+                unpositionedMappers.put(depth, mapperList);
+            } else {
+                mappersPerDepths.add(mapper);
+            }
         }
 
         private void updateMaxColumnPosition(@Nonnull Integer columnPosition) {
