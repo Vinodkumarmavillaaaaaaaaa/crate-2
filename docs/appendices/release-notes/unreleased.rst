@@ -119,3 +119,6 @@ Fixes
 
 - Fixed an issue that caused ``array_upper`` and ``array_lower`` scalar
   functions return wrong results on multidimensional arrays.
+
+- Fixed a column positions issue that caused an ``INSERT`` or any other
+  statements that adds columns dynamically to throw an exception.
