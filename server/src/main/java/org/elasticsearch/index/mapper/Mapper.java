@@ -179,6 +179,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             int maxColumnPosition = Math.max(this.maxColumnPosition, toResolve.maxColumnPosition);
             for (var e : toResolve.unpositionedMappers.values()) {
                 for (Mapper unpositionedMapper : e) {
+                    assert unpositionedMapper.position == null : "unpositioned mappers should have position = null";
                     unpositionedMapper.position = ++maxColumnPosition;
                 }
             }

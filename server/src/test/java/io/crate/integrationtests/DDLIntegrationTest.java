@@ -456,6 +456,7 @@ public class DDLIntegrationTest extends IntegTestCase {
     @Test
     public void testAlterTableAddColumn() {
         execute("create table t (id int primary key) with (number_of_replicas=0)");
+        execute("refresh table t");
         execute("alter table t add column name string");
 
         execute("select data_type from information_schema.columns where " +
@@ -937,5 +938,11 @@ public class DDLIntegrationTest extends IntegTestCase {
                 )
                 """.stripIndent()
         ));
+
+        execute("select column_name, ordinal_position from information_schema.columns where table_name = 'tbl' order by ordinal_position");
+        assertThat(printedTable(response.rows()), is("""
+                                                         author| 1
+                                                         dummy| 3
+                                                         """)); // author_ft took the column position 2
     }
 }

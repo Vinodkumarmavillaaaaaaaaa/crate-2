@@ -29,46 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ColumnPositionsIntegrationTest extends SQLIntegrationTestCase {
 
     @Test
-    public void test_column_positions_from_create_table() {
-        execute(
-            """
-                create table t (
-                    ta boolean,
-                    tb text,
-                    tc object(dynamic) as (
-                        td text,
-                        te timestamp with time zone,
-                        tf object(dynamic) as (
-                            tg integer
-                        )
-                    ),
-                    INDEX th using fulltext(tb, tc['td']),
-                    ti ARRAY(OBJECT AS (tj INTEGER, tk TEXT)),
-                    tl ARRAY(GEO_POINT)
-                )
-                """
-        );
-        execute("""
-                    select column_name, ordinal_position
-                    from information_schema.columns
-                    where table_name = 't'
-                    order by 2""");
-        assertThat(printedTable(response.rows())).isEqualTo("""
-                                                         ta| 1
-                                                         tb| 2
-                                                         tc| 3
-                                                         tc['td']| 4
-                                                         tc['te']| 5
-                                                         tc['tf']| 6
-                                                         tc['tf']['tg']| 7
-                                                         ti| 9
-                                                         ti['tj']| 10
-                                                         ti['tk']| 11
-                                                         tl| 12
-                                                         """); // 'th' is a named index and is assigned column position 8
-    }
-
-    @Test
     public void test_column_positions_after_multiple_stmts_require_mapping_updates() throws Exception {
 
         String queryOrdinalPositions = "select column_name, ordinal_position from information_schema.columns where table_name = 't' order by 2";

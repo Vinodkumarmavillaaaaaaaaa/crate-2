@@ -34,6 +34,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.rtsp.RtspResponseStatuses.BAD_REQUEST;
 import static io.netty.handler.codec.rtsp.RtspResponseStatuses.INTERNAL_SERVER_ERROR;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.both;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -140,6 +141,30 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         assertThat(response.rows()[1][0], is("04732e1g60qj0dpl6csjicpo"));
     }
 
+    @Test
+    public void testCopyFromIntoPartitionedTableDynamic() throws Exception {
+        execute("""
+                    create table quotes (
+                        id integer primary key
+                    ) partitioned by (id) with (column_policy='dynamic');
+                    """);
+        execute("copy quotes from ?", new Object[]{copyFilePath + "test_copy_from.json"});
+        refresh();
+
+        execute("select * from quotes order by id");
+        assertThat(printedTable(response.rows()), is("""
+                                                         1| Don't pañic.
+                                                         2| Would it save you a lot of time if I just gave up and went mad now?
+                                                         3| Time is an illusion. Lunchtime doubly so.
+                                                         """));
+
+        execute("select column_name, ordinal_position from information_schema.columns where table_name='quotes' order by ordinal_position");
+        assertThat(printedTable(response.rows()), is("""
+                                                         id| 1
+                                                         quote| 2
+                                                         """));
+
+    }
 
     @Test
     public void testCopyFromIntoPartitionedTable() throws Exception {
@@ -265,7 +290,6 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
             "   quote string," +
             "   timestamp timestamp with time zone" +
             ") partitioned by(timestamp) with (number_of_replicas=0)");
-
         execute("select * from information_schema.tables where table_schema = ? order by table_name", new Object[]{sqlExecutor.getCurrentSchema()});
         assertThat(response.rowCount(), is(1L));
         assertThat(response.rows()[0][12], is("quotes"));
@@ -571,6 +595,34 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         assertThat((Integer) response.rows()[1][0], is(3));
         assertThat((Byte) response.rows()[1][1], is(b));
         assertThat((String) response.rows()[1][2], is("Now panic"));
+    }
+
+    @Test
+    public void testUpdateNewColumnPartitionedTableDynamic() throws Exception {
+        execute("create table dynamic_table (" +
+                "  id integer primary key, " +
+                "  name string" +
+                ") partitioned by (id) with (column_policy='dynamic', number_of_replicas=0)");
+        ensureYellow();
+        execute("insert into dynamic_table (id, name) values (1, 'Ford')");
+        execute("refresh table dynamic_table");
+
+        execute("select * from dynamic_table");
+        assertThat(response.rowCount(), Matchers.is(1L));
+        assertThat(response.cols(), Matchers.is(arrayContaining("id", "name")));
+        assertThat(response.rows()[0], Matchers.is(Matchers.<Object>arrayContaining(1, "Ford")));
+
+        execute("update dynamic_table set name='Trillian', boo=true where name='Ford'");
+        execute("refresh table dynamic_table");
+
+        execute("select ordinal_position from information_schema.columns where table_name = 'dynamic_table' and column_name = 'boo'");
+        assertThat(response.rows()[0][0], Matchers.is(3));
+
+        waitForMappingUpdateOnAll("dynamic_table", "boo");
+        execute("select * from dynamic_table");
+        assertThat(response.rowCount(), Matchers.is(1L));
+        assertThat(response.cols(), Matchers.is(arrayContaining("id", "name", "boo")));
+        assertThat(response.rows()[0], Matchers.is(Matchers.arrayContaining(1, "Trillian", true)));
     }
 
     @Test
@@ -1133,8 +1185,15 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         refresh();
         waitForMappingUpdateOnAll("quotes", "author.surname");
 
-        execute("select * from information_schema.columns where table_name = 'quotes'");
-        assertEquals(6L, response.rowCount());
+        execute("select column_name, ordinal_position from information_schema.columns where table_name = 'quotes' order by ordinal_position");
+        assertThat(printedTable(response.rows()), is("""
+                                                         id| 1
+                                                         quote| 2
+                                                         date| 3
+                                                         author| 4
+                                                         author['name']| 5
+                                                         author['surname']| 6
+                                                         """));
 
         execute("select author['surname'] from quotes order by id");
         assertEquals(3L, response.rowCount());
@@ -1687,6 +1746,14 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         execute("alter table t add column name string");
         execute("alter table t add column ft_name string index using fulltext");
         ensureYellow();
+
+        execute("select column_name, ordinal_position from information_schema.columns where table_name='t' order by ordinal_position");
+        assertThat(printedTable(response.rows()), is("""
+                                                         id| 1
+                                                         date| 2
+                                                         name| 3
+                                                         ft_name| 4
+                                                         """));
 
         execute("select * from t");
         assertThat(Arrays.asList(response.cols()), Matchers.containsInAnyOrder("date", "ft_name", "id", "name"));

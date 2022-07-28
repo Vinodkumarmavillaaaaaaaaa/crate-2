@@ -146,6 +146,13 @@ public class CopyIntegrationTest extends SQLHttpIntegrationTest {
         execute("select quote, comment from quotes where id = 1");
         assertThat(response.rows()[0][0], is("Don't pa\u00f1ic."));
         assertThat(response.rows()[0][1], is("good one"));
+
+        execute("select column_name, ordinal_position from information_schema.columns where table_name = 'quotes' order by ordinal_position");
+        assertThat(printedTable(response.rows()), is("""
+                                                         id| 1
+                                                         quote| 2
+                                                         comment| 3
+                                                         """));
     }
 
     @Test
