@@ -83,7 +83,9 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
             is("{_meta={primary_keys=[pk.a, pk.b.c]}, " +
                "properties={" +
                     "x={type=integer}, " +
-                    "pk={dynamic=true, type=object, properties={a={type=integer}, b={dynamic=true, type=object, properties={c={type=integer}}}}}}}")
+                    "pk={dynamic=true, position=1, type=object, " +
+                        "properties={a={position=2, type=integer}, " +
+                            "b={dynamic=true, position=3, type=object, properties={c={position=4, type=integer}}}}}}}")
         );
     }
 
@@ -389,7 +391,7 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
                " properties={foo={dynamic=true," +
                " properties={name={type=keyword}, score={type=float}}, type=object}}," +
                " type=object}, " +
-               "id={type=long}}"));
+               "id={position=1, type=long}}"));
     }
 
     @Test
@@ -496,7 +498,7 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
         Map<String, Object> mapping = analysis.mapping();
         assertThat(mapToSortedString(mapping),
                    is("_meta={check_constraints={bazinga_check=\"bazinga\" > 0}, primary_keys=[id]}, " +
-                      "properties={bazinga={type=integer}, id={type=long}}"));
+                      "properties={bazinga={type=integer}, id={position=1, type=long}}"));
     }
 
     @Test
@@ -518,7 +520,7 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
             "alter table users add column string_no_docvalues string STORAGE WITH (columnstore = false)");
         Map<String, Object> mapping = analysis.mapping();
         assertThat(mapToSortedString(mapping),
-            is("_meta={primary_keys=[id]}, properties={id={type=long}, " +
+            is("_meta={primary_keys=[id]}, properties={id={position=1, type=long}, " +
                "string_no_docvalues={doc_values=false, type=keyword}}"));
     }
 
@@ -529,7 +531,7 @@ public class AlterTableAddColumnAnalyzerTest extends CrateDummyClusterServiceUni
             .build();
         BoundAddColumn addColumn = analyze("alter table tbl add column browser text");
         Map<String, Object> mapping = (Map<String, Object>) addColumn.mapping().get("properties");
-        assertThat(mapping, Matchers.hasEntry(is("num"), is(Map.of("index", false, "type", "long"))));
+        assertThat(mapping, Matchers.hasEntry(is("num"), is(Map.of("index", false, "position", 1, "type", "long"))));
     }
 
     @Test

@@ -458,17 +458,20 @@ public class DDLIntegrationTest extends IntegTestCase {
         execute("create table t (id int primary key) with (number_of_replicas=0)");
         execute("refresh table t");
         execute("alter table t add column name string");
-
-        execute("select data_type from information_schema.columns where " +
-                "table_name = 't' and column_name = 'name'");
-        assertThat(response.rows()[0][0], is("text"));
-
         execute("alter table t add column o object as (age int)");
-        execute("select data_type from information_schema.columns where " +
-                "table_name = 't' and column_name = 'o'");
-        assertThat((String) response.rows()[0][0], is("object"));
-    }
+        execute("alter table t add column o['q']['r']['s'] int");
 
+        execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't'");
+        assertThat(printedTable(response.rows()), is("""
+                                                        id| 1| integer
+                                                        name| 2| text
+                                                        o| 3| object
+                                                        o['age']| 4| integer
+                                                        o['q']| 5| object
+                                                        o['q']['r']| 6| object
+                                                        o['q']['r']['s']| 7| integer
+                                                         """));
+    }
 
     @Test
     public void testAlterTableAddColumnAsPrimaryKey() throws Exception {
