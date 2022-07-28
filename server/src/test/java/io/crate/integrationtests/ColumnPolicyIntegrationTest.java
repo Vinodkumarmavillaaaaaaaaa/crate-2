@@ -371,10 +371,9 @@ public class ColumnPolicyIntegrationTest extends IntegTestCase {
         execute("refresh table dynamic_table");
 
         waitForMappingUpdateOnAll("dynamic_table", "name");
-        execute("select * from dynamic_table");
+        execute("select name, good from dynamic_table");
         assertThat(response.rowCount(), is(1L));
-        assertThat(response.cols(), is(arrayContaining("id", "score", "name", "good")));
-        assertThat(response.rows()[0], is(Matchers.arrayContaining(1, 4656234.345D, "Trillian", true)));
+        assertThat(response.rows()[0], is(Matchers.arrayContaining("Trillian", true)));
     }
 
     @Test
