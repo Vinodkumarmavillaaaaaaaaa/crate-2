@@ -50,7 +50,6 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
-import static io.crate.execution.ddl.TransportSchemaUpdateAction.findMaxColumnPosition;
 import static io.crate.execution.ddl.TransportSchemaUpdateAction.populateColumnPositions;
 
 public class DDLClusterStateHelpers {
@@ -140,7 +139,7 @@ public class DDLClusterStateHelpers {
             XContentHelper.update(mergedMapping, (Map) o, false);
         }
         XContentHelper.update(mergedMapping, newMapping, false);
-        populateColumnPositions(mergedMapping, findMaxColumnPosition(mergedMapping));
+        populateColumnPositions(mergedMapping);
         return mergedMapping;
     }
 

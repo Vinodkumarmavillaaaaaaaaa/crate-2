@@ -20,33 +20,29 @@
 package org.elasticsearch.index.mapper;
 
 import org.elasticsearch.Version;
+import org.elasticsearch.cluster.metadata.ColumnPositionResolver;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContentFragment;
 import org.elasticsearch.index.analysis.IndexAnalyzers;
 import org.elasticsearch.index.query.QueryShardContext;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import javax.annotation.Nonnull;
 
 public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
     public static class BuilderContext {
         private final Settings indexSettings;
         private final ContentPath contentPath;
-        private final Mapper.ColumnPositionResolver columnPositionResolver;
+        private final ColumnPositionResolver<Mapper> columnPositionResolver;
 
         public BuilderContext(Settings indexSettings, ContentPath contentPath) {
             Objects.requireNonNull(indexSettings, "indexSettings is required");
             this.contentPath = contentPath;
             this.indexSettings = indexSettings;
-            this.columnPositionResolver = new Mapper.ColumnPositionResolver();
+            this.columnPositionResolver = new ColumnPositionResolver<>();
         }
 
         public ContentPath path() {
@@ -63,13 +59,16 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
         public void putPositionInfo(Mapper mapper, Integer position) {
             if (position == null) {
-                this.columnPositionResolver.addUnpositionedMapper(mapper, contentPath.currentDepth());
+                this.columnPositionResolver.addColumnToReposition(mapper.name(),
+                                                                  mapper,
+                                                                  (m, p) -> m.position = p,
+                                                                  contentPath.currentDepth());
             } else {
                 this.columnPositionResolver.updateMaxColumnPosition(position);
             }
         }
 
-        public Mapper.ColumnPositionResolver getColumnPositionResolver() {
+        public ColumnPositionResolver<Mapper> getColumnPositionResolver() {
             return columnPositionResolver;
         }
     }
@@ -168,42 +167,4 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
     /** Return the merge of {@code mergeWith} into this.
      *  Both {@code this} and {@code mergeWith} will be left unmodified. */
     public abstract Mapper merge(Mapper mergeWith);
-
-    static class ColumnPositionResolver {
-        private final Map<Integer, List<Mapper>> unpositionedMappers = new HashMap<>();
-        private int maxColumnPosition = 0;
-
-        ColumnPositionResolver resolve(@Nonnull ColumnPositionResolver toResolve) {
-            // only toResolve needs to hold a list of mappers to resolve the col positions
-            assert this.unpositionedMappers.size() == 0;
-            int maxColumnPosition = Math.max(this.maxColumnPosition, toResolve.maxColumnPosition);
-            for (var e : toResolve.unpositionedMappers.values()) {
-                for (Mapper unpositionedMapper : e) {
-                    assert unpositionedMapper.position == null : "unpositioned mappers should have position = null";
-                    unpositionedMapper.position = ++maxColumnPosition;
-                }
-            }
-
-            var merged = new ColumnPositionResolver();
-            merged.maxColumnPosition = maxColumnPosition;
-            return merged;
-        }
-
-        private void addUnpositionedMapper(Mapper mapper, int depth) {
-            // mappers are input in depth first order but want to convert it to breadth first order.
-            // That way, parent's position < children's positions.
-            List<Mapper> mappersPerDepths = unpositionedMappers.get(depth);
-            if (mappersPerDepths == null) {
-                List<Mapper> mapperList = new ArrayList<>();
-                mapperList.add(mapper);
-                unpositionedMappers.put(depth, mapperList);
-            } else {
-                mappersPerDepths.add(mapper);
-            }
-        }
-
-        private void updateMaxColumnPosition(@Nonnull Integer columnPosition) {
-            this.maxColumnPosition = Math.max(maxColumnPosition, columnPosition);
-        }
-    }
 }

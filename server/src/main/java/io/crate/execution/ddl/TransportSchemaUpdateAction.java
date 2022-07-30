@@ -42,6 +42,7 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.ClusterStateUpdateTask;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
+import org.elasticsearch.cluster.metadata.ColumnPositionResolver;
 import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
 import org.elasticsearch.cluster.metadata.Metadata;
 import org.elasticsearch.cluster.service.ClusterService;
@@ -205,7 +206,7 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
             Map<String, Object> source = parseMapping(xContentRegistry, cursor.value.toString());
             mergeIntoSource(source, newMapping);
             Map<String, Object> defaultMap = Maps.get(source, "default");
-            populateColumnPositions(defaultMap, findMaxColumnPosition(defaultMap));
+            populateColumnPositions(defaultMap);
             try (XContentBuilder xContentBuilder = JsonXContent.contentBuilder()) {
                 templateBuilder.putMapping(cursor.key, Strings.toString(xContentBuilder.map(source)));
             }
@@ -261,42 +262,33 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
         return state.blocks().globalBlockedException(ClusterBlockLevel.METADATA_WRITE);
     }
 
-    public static int findMaxColumnPosition(Map<String, Object> map) {
-        Map<String, Object> properties = Maps.get(map, "properties");
-        if (properties == null) {
-            return 0;
-        }
-        int maxPosition = 0;
-        for (var e : properties.values()) {
-            Map<String, Object> columnProperties = (Map<String, Object>) e;
-            columnProperties = furtherColumnProperties(columnProperties);
-            Integer childPosition = (Integer) columnProperties.get("position");
-            if (childPosition != null) {
-                maxPosition = Math.max(maxPosition, childPosition);
-            }
-            maxPosition = Math.max(maxPosition, findMaxColumnPosition(columnProperties));
-        }
-        return maxPosition;
+    public static boolean populateColumnPositions(Map<String, Object> mapping) {
+        var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
+        populateColumnPositions(mapping, 1, columnPositionResolver);
+        ColumnPositionResolver.resolve(columnPositionResolver);
+        return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 
-    public static void populateColumnPositions(Map<String, Object> mapping, Integer columnPosition) {
-        populateColumnPositionsImpl(mapping, new Integer[]{columnPosition});
-    }
-
-    private static void populateColumnPositionsImpl(Map<String, Object> mapping, Integer[] columnPosition) {
+    private static void populateColumnPositions(Map<String, Object> mapping, int currentDepth, ColumnPositionResolver<Map<String, Object>> columnPositionResolver) {
 
         Map<String, Object> properties = Maps.get(mapping, "properties");
         if (properties == null) {
             return;
         }
-        for (var e : properties.values()) {
-            Map<String, Object> columnProperties = (Map<String, Object>) e;
+        for (var e : properties.entrySet()) {
+            String name = e.getKey();
+            Map<String, Object> columnProperties = (Map<String, Object>) e.getValue();
             columnProperties = furtherColumnProperties(columnProperties);
-            Integer childPosition = (Integer) columnProperties.get("position");
-            if (childPosition == null) {
-                columnProperties.put("position", ++columnPosition[0]);
+            Integer position = (Integer) columnProperties.get("position");
+            if (position == null) {
+                columnPositionResolver.addColumnToReposition(name,
+                                                             columnProperties,
+                                                             (cp, p) -> cp.put("position", p),
+                                                             currentDepth);
+            } else {
+                columnPositionResolver.updateMaxColumnPosition(position);
             }
-            populateColumnPositionsImpl(columnProperties, columnPosition);
+            populateColumnPositions(columnProperties, currentDepth + 1, columnPositionResolver);
         }
     }
 }

@@ -22,10 +22,12 @@
 package io.crate.metadata.upgrade;
 
 import com.carrotsearch.hppc.cursors.ObjectObjectCursor;
+import io.crate.common.collections.Maps;
 import io.crate.metadata.IndexParts;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.cluster.metadata.AliasMetadata;
+import org.elasticsearch.cluster.metadata.ColumnPositionResolver;
 import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.compress.CompressedXContent;
@@ -35,10 +37,15 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentType;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.UnaryOperator;
 
+import static io.crate.metadata.doc.DocIndexMetadata.furtherColumnProperties;
 import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;
 import static org.elasticsearch.common.settings.IndexScopedSettings.DEFAULT_SCOPED_SETTINGS;
 
@@ -87,14 +94,15 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
             try {
                 for (ObjectObjectCursor<String, CompressedXContent> cursor : templateMetadata.getMappings()) {
                     var mappingSource = XContentHelper.toMap(cursor.value.compressedReference(), XContentType.JSON);
-
-                    Object defaultMapping = mappingSource.get("default");
-                    if (defaultMapping instanceof Map && ((Map<?, ?>) defaultMapping).containsKey("_all")) {
-                        Map<?, ?> mapping = (Map<?, ?>) defaultMapping;
-
+                    Map<String, Object> defaultMapping = Maps.get(mappingSource, "default");
+                    boolean updated = populateColumnPositions(defaultMapping);
+                    if (defaultMapping.containsKey("_all")) {
                         // Support for `_all` was removed (in favour of `copy_to`.
                         // We never utilized this but always set `_all: {enabled: false}` if you created a table using SQL in earlier version, so we can safely drop it.
-                        mapping.remove("_all");
+                        defaultMapping.remove("_all");
+                        updated = true;
+                    }
+                    if (updated) {
                         builder.putMapping(
                             cursor.key,
                             new CompressedXContent(BytesReference.bytes(XContentFactory.jsonBuilder().value(mappingSource))));
@@ -113,5 +121,44 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
             upgradedTemplates.put(templateName, builder.build());
         }
         return upgradedTemplates;
+    }
+
+    static boolean populateColumnPositions(Map<String, Object> mapping) {
+        var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
+        populateColumnPositions(mapping, 1, columnPositionResolver, new HashSet<>());
+        ColumnPositionResolver.resolve(columnPositionResolver);
+        return columnPositionResolver.numberOfColumnsToReposition() > 0;
+    }
+
+    private static void populateColumnPositions(Map<String, Object> mapping,
+                                                int currentDepth,
+                                                ColumnPositionResolver<Map<String, Object>> columnPositionResolver,
+                                                Set<Integer> takenPositions) {
+
+        Map<String, Object> properties = Maps.get(mapping, "properties");
+        if (properties == null) {
+            return;
+        }
+        List<Map<String, Object>> childrenColumnProperties = new ArrayList<>();
+        for (var e : properties.entrySet()) {
+            String name = e.getKey();
+            Map<String, Object> columnProperties = (Map<String, Object>) e.getValue();
+            columnProperties = furtherColumnProperties(columnProperties);
+            Integer position = (Integer) columnProperties.get("position");
+            if (position == null || takenPositions.contains(position)) {
+                columnPositionResolver.addColumnToReposition(name,
+                                                             columnProperties,
+                                                             (cp, p) -> cp.put("position", p),
+                                                             currentDepth);
+            } else {
+                takenPositions.add(position);
+                columnPositionResolver.updateMaxColumnPosition(position);
+            }
+            childrenColumnProperties.add(columnProperties);
+        }
+        // Depth-First traversal
+        for (var childColumnProperties : childrenColumnProperties) {
+            populateColumnPositions(childColumnProperties, currentDepth + 1, columnPositionResolver, takenPositions);
+        }
     }
 }

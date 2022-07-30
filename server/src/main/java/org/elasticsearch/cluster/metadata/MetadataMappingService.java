@@ -57,7 +57,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.crate.execution.ddl.TransportSchemaUpdateAction.findMaxColumnPosition;
 import static io.crate.metadata.doc.DocIndexMetadata.furtherColumnProperties;
 import static org.elasticsearch.indices.cluster.IndicesClusterStateService.AllocatedIndices.IndexRemovalReason.NO_LONGER_ASSIGNED;
 
@@ -281,9 +280,9 @@ public class MetadataMappingService {
                     String partitionName = PartitionName.templateName(index.getName());
                     IndexTemplateMetadata indexTemplateMetadata = currentState.metadata().templates().get(partitionName);
                     updatedSourceMap = XContentHelper.convertToMap(mappingUpdateSource.compressedReference(), true).map();
-                    populateColumnPositions(updatedSourceMap, findMaxColumnPosition(updatedSourceMap),
-                        // if partitioned, template-mapping should contain the latest column positions
-                        indexTemplateMetadata.mappings().get(Constants.DEFAULT_MAPPING_TYPE)
+                    populateColumnPositions(updatedSourceMap,
+                                            // if partitioned, template-mapping should contain the latest column positions
+                                            indexTemplateMetadata.mappings().get(Constants.DEFAULT_MAPPING_TYPE)
                     );
                 }
 
@@ -384,17 +383,15 @@ public class MetadataMappingService {
                 });
     }
 
-    private void populateColumnPositions(Map<String, Object> mapping, Integer maxPosition, CompressedXContent mappingToReference) {
+    public static void populateColumnPositions(Map<String, Object> mapping, CompressedXContent mappingToReference) {
         Map<String, Object> parsedTemplateMapping = XContentHelper.convertToMap(mappingToReference.compressedReference(), true).map();
-
         populateColumnPositionsImpl(
             Maps.getOrDefault(mapping, "default", mapping),
-            new Integer[]{maxPosition},
             Maps.getOrDefault(parsedTemplateMapping, "default", parsedTemplateMapping)
         );
     }
 
-    private void populateColumnPositionsImpl(Map<String, Object> indexMapping, Integer[] columnPosition, Map<String, Object> templateMapping) {
+    private static void populateColumnPositionsImpl(Map<String, Object> indexMapping, Map<String, Object> templateMapping) {
         Map<String, Object> indexProperties = Maps.get(indexMapping, "properties");
         if (indexProperties == null) {
             return;
@@ -414,17 +411,12 @@ public class MetadataMappingService {
             templateColumnProperties = furtherColumnProperties(templateColumnProperties);
             indexColumnProperties = furtherColumnProperties(indexColumnProperties);
 
-            Integer indexChildPosition = (Integer) indexColumnProperties.get("position");
-            if (indexChildPosition == null) {
-                Integer templateChildPosition = (Integer) templateColumnProperties.get("position");
-                if (templateChildPosition != null) {
-                    indexColumnProperties.put("position", templateChildPosition);
-                } else {
-                    indexColumnProperties.put("position", ++columnPosition[0]);
-                }
-            }
+            Integer templateChildPosition = (Integer) templateColumnProperties.get("position");
+            assert templateChildPosition != null : "the template mapping is missing column positions";
+            // since template mapping and index mapping should be consistent, simply override
+            indexColumnProperties.put("position", templateChildPosition);
 
-            populateColumnPositionsImpl(indexColumnProperties, columnPosition, templateColumnProperties);
+            populateColumnPositionsImpl(indexColumnProperties, templateColumnProperties);
         }
     }
 }

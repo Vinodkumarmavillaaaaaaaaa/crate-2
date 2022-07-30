@@ -1686,11 +1686,11 @@ public class InsertIntoIntegrationTest extends IntegTestCase {
                                                                            tb| 1| object_array
                                                                            p| 2| integer
                                                                            tb['t1']| 3| object_array
-                                                                           tb['t1']['t6']| 4| bigint_array
+                                                                           tb['t2']| 4| object
                                                                            tb['t1']['t3']| 5| object
-                                                                           tb['t1']['t3']['t4']| 6| object
-                                                                           tb['t1']['t3']['t4']['t5']| 7| bigint
-                                                                           tb['t2']| 8| object
+                                                                           tb['t1']['t6']| 6| bigint_array
+                                                                           tb['t1']['t3']['t4']| 7| object
+                                                                           tb['t1']['t3']['t4']['t5']| 8| bigint
                                                                            """);
 
         execute("select * from t");

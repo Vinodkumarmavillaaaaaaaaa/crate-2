@@ -22,11 +22,12 @@ package org.elasticsearch.index.mapper;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.elasticsearch.cluster.metadata.ColumnPositionResolver;
 import org.elasticsearch.common.settings.Settings;
 
 public class RootObjectMapper extends ObjectMapper {
 
-    private ColumnPositionResolver columnPositionResolver;
+    private ColumnPositionResolver<Mapper> columnPositionResolver;
 
     public static class Builder extends ObjectMapper.Builder<Builder> {
 
@@ -75,7 +76,7 @@ public class RootObjectMapper extends ObjectMapper {
                      Dynamic dynamic,
                      Map<String, Mapper> mappers,
                      Settings settings,
-                     ColumnPositionResolver columnPositionResolver) {
+                     ColumnPositionResolver<Mapper> columnPositionResolver) {
         super(name, null, name, dynamic, mappers, settings);
         this.columnPositionResolver = columnPositionResolver;
     }
@@ -84,8 +85,8 @@ public class RootObjectMapper extends ObjectMapper {
     public RootObjectMapper merge(Mapper mergeWith) {
         RootObjectMapper newMapper = (RootObjectMapper) super.merge(mergeWith);
         if (mergeWith instanceof RootObjectMapper rootObjectMapper) {
-            newMapper.columnPositionResolver =
-                this.columnPositionResolver.resolve(rootObjectMapper.columnPositionResolver);
+            rootObjectMapper.columnPositionResolver.updateMaxColumnPosition(this.columnPositionResolver.getMaxColumnPosition());
+            newMapper.columnPositionResolver = ColumnPositionResolver.resolve(rootObjectMapper.columnPositionResolver);
         }
         return newMapper;
     }

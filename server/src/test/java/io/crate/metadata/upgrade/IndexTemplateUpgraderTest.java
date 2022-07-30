@@ -140,6 +140,6 @@ public class IndexTemplateUpgraderTest {
         IndexTemplateMetadata updatedTemplate = result.get(templateName);
 
         CompressedXContent compressedXContent = updatedTemplate.mappings().get(Constants.DEFAULT_MAPPING_TYPE);
-        assertThat(compressedXContent.string(), is("{\"default\":{\"properties\":{\"name\":{\"type\":\"keyword\"}}}}"));
+        assertThat(compressedXContent.string(), is("{\"default\":{\"properties\":{\"name\":{\"position\":1,\"type\":\"keyword\"}}}}"));
     }
 }
