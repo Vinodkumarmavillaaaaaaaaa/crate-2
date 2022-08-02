@@ -19,6 +19,7 @@
 
 package org.elasticsearch.cluster.metadata;
 
+import io.crate.common.annotations.VisibleForTesting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessage;
@@ -391,7 +392,9 @@ public class MetadataMappingService {
         );
     }
 
-    private static void populateColumnPositionsImpl(Map<String, Object> indexMapping, Map<String, Object> templateMapping) {
+    // template mappings must contain up-to-date and correct column positions that all relevant index mappings can reference.
+    @VisibleForTesting
+    static void populateColumnPositionsImpl(Map<String, Object> indexMapping, Map<String, Object> templateMapping) {
         Map<String, Object> indexProperties = Maps.get(indexMapping, "properties");
         if (indexProperties == null) {
             return;
@@ -413,7 +416,7 @@ public class MetadataMappingService {
 
             Integer templateChildPosition = (Integer) templateColumnProperties.get("position");
             assert templateChildPosition != null : "the template mapping is missing column positions";
-            // since template mapping and index mapping should be consistent, simply override
+            // since template mapping and index mapping should be consistent, simply override (this will resolve any duplicates in index mappings)
             indexColumnProperties.put("position", templateChildPosition);
 
             populateColumnPositionsImpl(indexColumnProperties, templateColumnProperties);

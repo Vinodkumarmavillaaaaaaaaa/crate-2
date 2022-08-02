@@ -61,6 +61,7 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.index.Index;
+import org.elasticsearch.index.mapper.ContentPath;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -264,12 +265,12 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
 
     public static boolean populateColumnPositions(Map<String, Object> mapping) {
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
-        populateColumnPositions(mapping, 1, columnPositionResolver);
+        populateColumnPositions(mapping, new ContentPath(), columnPositionResolver);
         ColumnPositionResolver.resolve(columnPositionResolver);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 
-    private static void populateColumnPositions(Map<String, Object> mapping, int currentDepth, ColumnPositionResolver<Map<String, Object>> columnPositionResolver) {
+    public static void populateColumnPositions(Map<String, Object> mapping, ContentPath contentPath, ColumnPositionResolver<Map<String, Object>> columnPositionResolver) {
 
         Map<String, Object> properties = Maps.get(mapping, "properties");
         if (properties == null) {
@@ -277,18 +278,20 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
         }
         for (var e : properties.entrySet()) {
             String name = e.getKey();
+            contentPath.add(name);
             Map<String, Object> columnProperties = (Map<String, Object>) e.getValue();
             columnProperties = furtherColumnProperties(columnProperties);
             Integer position = (Integer) columnProperties.get("position");
             if (position == null) {
-                columnPositionResolver.addColumnToReposition(name,
+                columnPositionResolver.addColumnToReposition(contentPath.pathAsText(""),
                                                              columnProperties,
                                                              (cp, p) -> cp.put("position", p),
-                                                             currentDepth);
+                                                             contentPath.currentDepth());
             } else {
                 columnPositionResolver.updateMaxColumnPosition(position);
             }
-            populateColumnPositions(columnProperties, currentDepth + 1, columnPositionResolver);
+            populateColumnPositions(columnProperties, contentPath, columnPositionResolver);
+            contentPath.remove();
         }
     }
 }

@@ -37,12 +37,12 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentType;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 
 import static io.crate.metadata.doc.DocIndexMetadata.furtherColumnProperties;
@@ -123,14 +123,15 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
         return upgradedTemplates;
     }
 
-    static boolean populateColumnPositions(Map<String, Object> mapping) {
+    public static boolean populateColumnPositions(Map<String, Object> mapping) {
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
-        populateColumnPositions(mapping, 1, columnPositionResolver, new HashSet<>());
+        populateColumnPositions("", mapping, 1, columnPositionResolver, new HashSet<>());
         ColumnPositionResolver.resolve(columnPositionResolver);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 
-    private static void populateColumnPositions(Map<String, Object> mapping,
+    private static void populateColumnPositions(String parentName,
+                                                Map<String, Object> mapping,
                                                 int currentDepth,
                                                 ColumnPositionResolver<Map<String, Object>> columnPositionResolver,
                                                 Set<Integer> takenPositions) {
@@ -139,9 +140,9 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
         if (properties == null) {
             return;
         }
-        List<Map<String, Object>> childrenColumnProperties = new ArrayList<>();
+        Map<String, Map<String, Object>> childrenColumnProperties = new TreeMap<>(Comparator.naturalOrder());
         for (var e : properties.entrySet()) {
-            String name = e.getKey();
+            String name = parentName + e.getKey();
             Map<String, Object> columnProperties = (Map<String, Object>) e.getValue();
             columnProperties = furtherColumnProperties(columnProperties);
             Integer position = (Integer) columnProperties.get("position");
@@ -154,11 +155,15 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
                 takenPositions.add(position);
                 columnPositionResolver.updateMaxColumnPosition(position);
             }
-            childrenColumnProperties.add(columnProperties);
+            childrenColumnProperties.put(name, columnProperties);
         }
-        // Depth-First traversal
-        for (var childColumnProperties : childrenColumnProperties) {
-            populateColumnPositions(childColumnProperties, currentDepth + 1, columnPositionResolver, takenPositions);
+        // Breadth-First traversal
+        for (var childColumnProperties : childrenColumnProperties.entrySet()) {
+            populateColumnPositions(childColumnProperties.getKey(),
+                                    childColumnProperties.getValue(),
+                                    currentDepth + 1,
+                                    columnPositionResolver,
+                                    takenPositions);
         }
     }
 }
