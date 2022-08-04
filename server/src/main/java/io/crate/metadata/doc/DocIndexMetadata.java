@@ -436,7 +436,7 @@ public class DocIndexMetadata {
             boolean nullable = !notNullColumns.contains(newIdent) && !primaryKey.contains(newIdent);
             columnProperties = furtherColumnProperties(columnProperties);
             assert columnProperties.containsKey("position") : "Column position is missing: " + newIdent.fqn();
-            int position = columnPosition((int) columnProperties.getOrDefault("position", 0));
+            int position = (int) columnProperties.get("position");
             assert !takenPositions.containsKey(position) : "Duplicate column position assigned to " + newIdent.fqn() + " and " + takenPositions.get(position);
             takenPositions.put(position, newIdent.fqn());
             String defaultExpression = (String) columnProperties.getOrDefault("default_expr", null);
@@ -597,28 +597,6 @@ public class DocIndexMetadata {
             return primaryKey.get(0);
         }
         return DocSysColumns.ID;
-    }
-
-    /**
-     * Returns the column position inside the table definition.
-     *
-     * Tables created with CrateDB < 4.0 don't have any positional information stored inside the meta data so
-     * we must fallback to old behaviour which uses a simple increased iterating based var.
-     *
-     * Sub-columns of object type columns do not have any positional information stored inside the meta
-     * data. But we do expose one now, by using the internal counter.
-     * Thus follow-up column's position must be adjusted.
-     */
-    private int columnPosition(int storedPosition) {
-        columnPosition++;
-
-        if (storedPosition != columnPosition) {
-            if (versionCreated.onOrAfter(Version.V_5_1_0)) {
-                return storedPosition;
-            }
-            return columnPosition;
-        }
-        return storedPosition;
     }
 
     public DocIndexMetadata build() {
