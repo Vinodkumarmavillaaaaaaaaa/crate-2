@@ -291,7 +291,8 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
             Map<String, Object> columnProperties = (Map<String, Object>) e.getValue();
             columnProperties = furtherColumnProperties(columnProperties);
             Integer position = (Integer) columnProperties.get("position");
-            if (position == null || position < 0) {
+            assert position != null : "position should not be null";
+            if (position < 0) {
                 columnPositionResolver.addColumnToReposition(contentPath.pathAsText(""),
                                                              position,
                                                              columnProperties,

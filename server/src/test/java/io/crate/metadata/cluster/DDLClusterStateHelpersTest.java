@@ -47,11 +47,13 @@ public class DDLClusterStateHelpersTest {
             .startObject("properties")
             .startObject("foo")
             .field("merge-this-field", "foo")
+            .field("position", 1)
             .endObject()
             .endObject()
             .startObject("_meta")
             .startObject("meta1")
             .field("field", "val1")
+            .field("position", 2)
             .endObject()
             .endObject()
             .endObject();
@@ -64,14 +66,17 @@ public class DDLClusterStateHelpersTest {
             .startObject("properties")
             .startObject("foo")
             .field("merge-this-field", "bar")
+            .field("position", 1)
             .endObject()
             .endObject()
             .startObject("_meta")
             .startObject("meta1")
             .field("field", "val1")
+            .field("position", 2)
             .endObject()
             .startObject("meta2")
             .field("field", "val2")
+            .field("position", 3)
             .endObject()
             .endObject()
             .endObject();
@@ -90,7 +95,7 @@ public class DDLClusterStateHelpersTest {
                 .build(),
             newMapping);
         assertThat(Strings.toString(XContentFactory.jsonBuilder().map(mapping))).isEqualTo(
-            "{\"_meta\":{\"meta2\":{\"field\":\"val2\"},\"meta1\":{\"field\":\"val1\"}},\"properties\":{\"foo\":{\"merge-this-field\":\"bar\",\"position\":1}}}");
+            "{\"_meta\":{\"meta2\":{\"field\":\"val2\",\"position\":3},\"meta1\":{\"field\":\"val1\",\"position\":2}},\"properties\":{\"foo\":{\"merge-this-field\":\"bar\",\"position\":1}}}");
     }
 
 }

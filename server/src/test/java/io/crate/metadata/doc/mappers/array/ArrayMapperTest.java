@@ -109,7 +109,7 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                         .startObject("array_field")
                             .field("type", ArrayMapper.CONTENT_TYPE)
                             .startObject(ArrayMapper.INNER_TYPE)
-                                .field("type", "keyword")
+                                .field("type", "keyword").field("position", 1)
                             .endObject()
                         .endObject()
                     .endObject()
@@ -139,7 +139,8 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                "\"array_field\":{" +
                "\"type\":\"array\"," +
                "\"inner\":{" +
-               "\"type\":\"keyword\"" +
+               "\"type\":\"keyword\"," +
+               "\"position\":1" +
                "}" +
                "}" +
                "}" +
@@ -176,7 +177,7 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
             .startObject("array_field")
             .field("type", ArrayMapper.CONTENT_TYPE)
             .startObject(ArrayMapper.INNER_TYPE)
-            .field("type", "double")
+            .field("type", "double").field("position", 1)
             .endObject()
             .endObject()
             .endObject().endObject().endObject());
@@ -203,11 +204,11 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                         .startObject("array_field")
                             .field("type", ArrayMapper.CONTENT_TYPE)
                             .startObject(ArrayMapper.INNER_TYPE)
-                                .field("type", "object")
+                                .field("type", "object").field("position", 1)
                                 .field("dynamic", true)
                                 .startObject("properties")
                                     .startObject("s")
-                                        .field("type", "keyword")
+                                        .field("type", "keyword").field("position", 2)
                                     .endObject()
                                 .endObject()
                             .endObject()
@@ -248,10 +249,12 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                "\"array_field\":{" +
                "\"type\":\"array\"," +
                "\"inner\":{" +
+               "\"position\":1," +
                "\"dynamic\":\"true\"," +
                "\"properties\":{" +
                "\"s\":{" +
-               "\"type\":\"keyword\"" +
+               "\"type\":\"keyword\"," +
+               "\"position\":2" +
                "}" +
                "}" +
                "}" +
@@ -357,7 +360,7 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                         .startObject("array_field")
                             .field("type", ArrayMapper.CONTENT_TYPE)
                             .startObject(ArrayMapper.INNER_TYPE)
-                                .field("type", "double")
+                                .field("type", "double").field("position", 1)
                             .endObject()
                         .endObject()
                     .endObject()
@@ -385,7 +388,7 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                         .startObject("array_field")
                             .field("type", ArrayMapper.CONTENT_TYPE)
                             .startObject(ArrayMapper.INNER_TYPE)
-                                .field("type", "object")
+                                .field("type", "object").field("position", 1)
                                 .startObject("properties")
                                 .endObject()
                             .endObject()

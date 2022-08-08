@@ -45,7 +45,14 @@ public class ColumnPositionResolver<T> {
                     return 1;
                 } else if (o2.columnOrdering == null) {
                     return -1;
-                } else return o2.columnOrdering.compareTo(o1.columnOrdering);
+                } else {
+                    int comparison = o2.columnOrdering.compareTo(o1.columnOrdering);
+                    if (comparison != 0) {
+                        return comparison;
+                    } else {
+                        return o1.name.compareTo(o2.name);
+                    }
+                }
             });
             for (Column<T> column : o) {
                 column.updatePosition(++maxColumnPosition);

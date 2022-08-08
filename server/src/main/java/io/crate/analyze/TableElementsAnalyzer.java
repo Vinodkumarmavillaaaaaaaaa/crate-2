@@ -54,34 +54,28 @@ import io.crate.sql.tree.TableElement;
 import io.crate.types.ArrayType;
 import io.crate.types.ObjectType;
 
-import static io.crate.analyze.AlterTableAddColumnAnalyzer.COLUMN_POSITION_FOR_ADD_COLUMNS;
-
 public class TableElementsAnalyzer {
 
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
                                                        @Nullable TableInfo tableInfo,
-                                                       boolean calculatePositions) {
-        return analyze(tableElements, relationName, tableInfo, true, calculatePositions);
+                                                       boolean isAddColumn) {
+        return analyze(tableElements, relationName, tableInfo, true, isAddColumn);
     }
 
-    /**
-     * Analyzes table elements.
-     * @param calculatePositions When this is set to false, position will be set to COLUMN_POSITION_FOR_ADD_COLUMNS.
-     *                           For ADD COLUMN, it should be set to false in order to calculate the column positions atomically later on.
-     */
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
                                                        @Nullable TableInfo tableInfo,
                                                        boolean logWarnings,
-                                                       boolean calculatePositions) {
+                                                       boolean isAddColumn) {
         AnalyzedTableElements<T> analyzedTableElements = new AnalyzedTableElements<>();
-        int positionOffset = tableInfo == null ? 0 : tableInfo.columns().size();
+        int positionOffset = isAddColumn ? 0 : (tableInfo == null ? 0 : tableInfo.columns().size());
         InnerTableElementsAnalyzer<T> analyzer = new InnerTableElementsAnalyzer<>();
         for (int i = 0; i < tableElements.size(); i++) {
             TableElement<T> tableElement = tableElements.get(i);
+            int position = positionOffset + (isAddColumn ? -1 : 1);
             ColumnDefinitionContext<T> ctx = new ColumnDefinitionContext<>(
-                calculatePositions ? positionOffset + 1 : COLUMN_POSITION_FOR_ADD_COLUMNS,
+                position,
                 null,
                 analyzedTableElements,
                 relationName,
@@ -120,6 +114,14 @@ public class TableElementsAnalyzer {
             this.logWarnings = logWarnings;
             this.currentColumnPosition = position;
         }
+
+        public void increaseCurrentPosition() {
+            if (currentColumnPosition > 0) {
+                currentColumnPosition++;
+            } else {
+                currentColumnPosition--;
+            }
+        }
     }
 
     private static class InnerTableElementsAnalyzer<T> extends DefaultTraversalVisitor<Void, ColumnDefinitionContext<T>> {
@@ -147,7 +149,6 @@ public class TableElementsAnalyzer {
 
         @Override
         public Void visitAddColumnDefinition(AddColumnDefinition<?> node, ColumnDefinitionContext<T> context) {
-            assert context.currentColumnPosition == COLUMN_POSITION_FOR_ADD_COLUMNS : "ADD COLUMN should not calculate column positions";
             AddColumnDefinition<T> addColumnDefinition = (AddColumnDefinition<T>) node;
             assert addColumnDefinition.name() instanceof Literal : "column name is expected to be a literal already";
             ColumnIdent column = ColumnIdent.fromPath(((Literal) addColumnDefinition.name()).value().toString());
@@ -169,16 +170,22 @@ public class TableElementsAnalyzer {
                     // If it is an array, set the collection type to array, or if it's an object keep the object column
                     // policy.
                     Reference parentRef = context.tableInfo.getReference(parent.ident());
+                    int childrenCnt = 0;
                     if (parentRef != null) {
                         parent.position = parentRef.position();
                         if (parentRef.valueType().id() == ArrayType.ID) {
+                            var childrenType = ((ArrayType) parentRef.valueType()).innerType();
+                            childrenCnt = (childrenType.id() == ObjectType.ID) ? ((ObjectType) childrenType).innerTypes().size() : 0;
                             parent.collectionType(ArrayType.NAME);
                         } else {
+                            childrenCnt = ((ObjectType) parentRef.valueType()).innerTypes().size();
                             parent.objectType(parentRef.columnPolicy());
                         }
                     }
                     parent.markAsParentColumn();
-                    leaf = new AnalyzedColumnDefinition<>(COLUMN_POSITION_FOR_ADD_COLUMNS, parent);
+                    int position = context.currentColumnPosition > 0 ? parent.position + childrenCnt + 1 : context.currentColumnPosition;
+                    context.currentColumnPosition = position;
+                    leaf = new AnalyzedColumnDefinition<>(position, parent);
                     leaf.name(name);
                     parent.addChild(leaf);
                     parent = leaf;
@@ -215,9 +222,7 @@ public class TableElementsAnalyzer {
             context.analyzedColumnDefinition.objectType(objectColumnType.objectType().orElse(ColumnPolicy.DYNAMIC));
             for (int i = 0; i < objectColumnType.nestedColumns().size(); i++) {
                 ColumnDefinition<T> columnDefinition = objectColumnType.nestedColumns().get(i);
-                if (context.currentColumnPosition != COLUMN_POSITION_FOR_ADD_COLUMNS) {
-                    context.currentColumnPosition++;
-                }
+                context.increaseCurrentPosition();
                 ColumnDefinitionContext<T> childContext = new ColumnDefinitionContext<>(
                     context.currentColumnPosition,
                     context.analyzedColumnDefinition,

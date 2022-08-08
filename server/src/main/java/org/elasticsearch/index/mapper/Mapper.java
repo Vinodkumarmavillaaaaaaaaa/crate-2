@@ -58,7 +58,8 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
         }
 
         public void putPositionInfo(Mapper mapper, Integer position) {
-            if (position == null || position < 0) {
+            assert position != null : "position should not be null";
+            if (position < 0) {
                 this.columnPositionResolver.addColumnToReposition(mapper.name(),
                                                                   position,
                                                                   mapper,

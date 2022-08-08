@@ -458,18 +458,20 @@ public class DDLIntegrationTest extends IntegTestCase {
         execute("create table t (id int primary key) with (number_of_replicas=0)");
         execute("refresh table t");
         execute("alter table t add column name string");
-        execute("alter table t add column o object as (age int)");
+        execute("alter table t add column o object as (b int, a object as (b int))");
         execute("alter table t add column o['q']['r']['s'] int");
 
         execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't'");
         assertThat(printedTable(response.rows()), is("""
-                                                        id| 1| integer
-                                                        name| 2| text
-                                                        o| 3| object
-                                                        o['age']| 4| integer
-                                                        o['q']| 5| object
-                                                        o['q']['r']| 6| object
-                                                        o['q']['r']['s']| 7| integer
+                                                         id| 1| integer
+                                                         name| 2| text
+                                                         o| 3| object
+                                                         o['b']| 4| integer
+                                                         o['a']| 5| object
+                                                         o['a']['b']| 6| integer
+                                                         o['q']| 7| object
+                                                         o['q']['r']| 8| object
+                                                         o['q']['r']['s']| 9| integer
                                                          """));
     }
 
