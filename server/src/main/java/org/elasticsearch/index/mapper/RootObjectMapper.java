@@ -90,4 +90,13 @@ public class RootObjectMapper extends ObjectMapper {
         }
         return newMapper;
     }
+
+    @Override
+    public ObjectMapper mappingUpdate(Mapper mapper) {
+        RootObjectMapper mappingUpdate = (RootObjectMapper) super.mappingUpdate(mapper);
+        // it makes sense to re-build the columnPositionResolver with respect to inner mapper changes,
+        // but it is not used, so cleared instead.
+        mappingUpdate.columnPositionResolver = new ColumnPositionResolver<>();
+        return mappingUpdate;
+    }
 }
