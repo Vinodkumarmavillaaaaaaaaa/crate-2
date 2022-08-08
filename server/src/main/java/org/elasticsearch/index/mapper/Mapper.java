@@ -58,8 +58,9 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
         }
 
         public void putPositionInfo(Mapper mapper, Integer position) {
-            if (position == null) {
+            if (position == null || position < 0) {
                 this.columnPositionResolver.addColumnToReposition(mapper.name(),
+                                                                  position,
                                                                   mapper,
                                                                   (m, p) -> m.position = p,
                                                                   contentPath.currentDepth());
@@ -83,12 +84,18 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             this.name = name;
         }
 
+        protected Integer position;
+
         public String name() {
             return this.name;
         }
 
         /** Returns a newly built mapper. */
         public abstract Mapper build(BuilderContext context);
+
+        public void position(Integer position) {
+            this.position = position;
+        }
     }
 
     public interface TypeParser {

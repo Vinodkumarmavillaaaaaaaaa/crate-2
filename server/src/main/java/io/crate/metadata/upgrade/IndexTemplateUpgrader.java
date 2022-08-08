@@ -148,6 +148,7 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
             Integer position = (Integer) columnProperties.get("position");
             if (position == null || takenPositions.contains(position)) {
                 columnPositionResolver.addColumnToReposition(name,
+                                                             null,
                                                              columnProperties,
                                                              (cp, p) -> cp.put("position", p),
                                                              currentDepth);

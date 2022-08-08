@@ -316,7 +316,7 @@ public class ArrayMapperTest extends CrateDummyClusterServiceUnitTest {
                "\"position\":1," +
                "\"dynamic\":\"true\"," +
                "\"properties\":{" +
-               "\"new\":{\"type\":\"boolean\"}," +
+               "\"new\":{\"type\":\"boolean\",\"position\":-1}," +
                "\"s\":{" +
                "\"type\":\"keyword\"," +
                "\"position\":2" +

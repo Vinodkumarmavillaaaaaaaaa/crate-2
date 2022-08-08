@@ -37,8 +37,16 @@ public class ColumnPositionResolver<T> {
     public static <T> ColumnPositionResolver<T> resolve(@Nonnull ColumnPositionResolver<T> toResolve) {
         int maxColumnPosition = toResolve.maxColumnPosition;
         for (var o : toResolve.columnsToReposition.values()) {
-            // accessed by depth first then name such that under the same parent, the children will take consecutive positions in natural order.
-            o.sort(Comparator.comparing(Column::name));
+            // column position calculation : by depth (ascending) first, columnOrdering (descending) second then by name third
+            o.sort((o1, o2) -> {
+                if (o1.columnOrdering == null && o2.columnOrdering == null) {
+                    return o1.name.compareTo(o2.name);
+                } else if (o1.columnOrdering == null) {
+                    return 1;
+                } else if (o2.columnOrdering == null) {
+                    return -1;
+                } else return o2.columnOrdering.compareTo(o1.columnOrdering);
+            });
             for (Column<T> column : o) {
                 column.updatePosition(++maxColumnPosition);
             }
@@ -49,8 +57,9 @@ public class ColumnPositionResolver<T> {
         return merged;
     }
 
-    public void addColumnToReposition(String name, T column, BiConsumer<T, Integer> positionUpdater, int depth) {
-        Column<T> c = new Column<>(name, positionUpdater, column);
+    public void addColumnToReposition(String name, Integer columnOrdering, T column, BiConsumer<T, Integer> positionUpdater, int depth) {
+        // columnOrdering specifies column order whereas column position specifies exact positions.
+        Column<T> c = new Column<>(name, columnOrdering, positionUpdater, column);
         List<Column<T>> columnsPerDepths = columnsToReposition.get(depth);
         if (columnsPerDepths == null) {
             List<Column<T>> columns = new ArrayList<>();
@@ -73,7 +82,7 @@ public class ColumnPositionResolver<T> {
         return this.maxColumnPosition;
     }
 
-    private record Column<T>(String name, BiConsumer<T, Integer> positionUpdater, T column) {
+    private record Column<T>(String name, Integer columnOrdering, BiConsumer<T, Integer> positionUpdater, T column) {
 
         public void updatePosition(Integer position) {
             this.positionUpdater.accept(column, position);

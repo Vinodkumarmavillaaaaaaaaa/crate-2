@@ -396,6 +396,7 @@ final class DocumentParser {
                 throw new StrictDynamicMappingException(mapper.fullPath(), currentFieldName);
             } else if (dynamic == ObjectMapper.Dynamic.TRUE) {
                 Mapper.Builder<?> builder = new ObjectMapper.Builder<>(currentFieldName);
+                builder.position(getPositionForDynamicField(context));
                 Mapper.BuilderContext builderContext = new Mapper.BuilderContext(context.indexSettings().getSettings(), context.path());
                 objectMapper = builder.build(builderContext);
                 context.addDynamicMapper(objectMapper);
@@ -410,6 +411,12 @@ final class DocumentParser {
                 context.path().remove();
             }
         }
+    }
+
+    static int getPositionForDynamicField(ParseContext context) {
+        // this does not return the exact column positions but column orderings
+        // which will be used for the actual column position calculations by ColumnPositionResolver.resolve()
+        return -1 - context.getDynamicMappers().size();
     }
 
     private static void parseArray(ParseContext context,
@@ -564,9 +571,9 @@ final class DocumentParser {
         }
         final Mapper.BuilderContext builderContext = new Mapper.BuilderContext(context.indexSettings().getSettings(), context.path());
         final Mapper.Builder<?> builder = createBuilderFromDynamicValue(context, token, currentFieldName);
+        builder.position(getPositionForDynamicField(context));
         Mapper mapper = builder.build(builderContext);
         context.addDynamicMapper(mapper);
-
         parseObjectOrField(context, mapper);
     }
 
@@ -647,6 +654,7 @@ final class DocumentParser {
                         throw new StrictDynamicMappingException(parent.fullPath(), paths[i]);
                     case TRUE:
                         Mapper.Builder<?> builder = new ObjectMapper.Builder<>(paths[i]);
+                        builder.position(getPositionForDynamicField(context));
                         Mapper.BuilderContext builderContext = new Mapper.BuilderContext(context.indexSettings().getSettings(),
                             context.path());
                         mapper = (ObjectMapper) builder.build(builderContext);

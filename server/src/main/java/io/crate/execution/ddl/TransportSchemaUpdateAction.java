@@ -235,6 +235,15 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
                     } else if (updateAllowed(key, sourceValue, updateValue)) {
                         source.put(key, updateValue);
                     } else if (!isUpdateIgnored(path) && !Objects.equals(sourceValue, updateValue)) {
+                        if (key.equals("position") && updateValue instanceof Integer intValue && intValue < 0) {
+                            // ex) copy-from to a partitioned table results in multiple template mapping updates.
+                            // If the copy-from stmt dynamically adds columns, its column positions will be negative first
+                            // representing that they are not yet fully calculated then positive representing the exact column positions.
+                            // So, if the sourceValue already contains something, it should be positive
+                            // meaning that the exact column positions have been calculated and updated the mapping.
+                            // Therefore, if updateValue is different(and negative) from the sourceValue, simply ignore it.
+                            continue;
+                        }
                         String fqKey = String.join(".", path) + '.' + key;
                         throw new IllegalArgumentException(
                             "Can't overwrite " + fqKey + "=" + sourceValue + " with " + updateValue);
@@ -282,8 +291,9 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
             Map<String, Object> columnProperties = (Map<String, Object>) e.getValue();
             columnProperties = furtherColumnProperties(columnProperties);
             Integer position = (Integer) columnProperties.get("position");
-            if (position == null) {
+            if (position == null || position < 0) {
                 columnPositionResolver.addColumnToReposition(contentPath.pathAsText(""),
+                                                             position,
                                                              columnProperties,
                                                              (cp, p) -> cp.put("position", p),
                                                              contentPath.currentDepth());

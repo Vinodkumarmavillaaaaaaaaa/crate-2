@@ -59,7 +59,6 @@ public class ObjectMapper extends Mapper implements Cloneable {
         protected Dynamic dynamic = Defaults.DYNAMIC;
 
         protected final List<Mapper.Builder> mappersBuilders = new ArrayList<>();
-        private Integer position;
 
         @SuppressWarnings("unchecked")
         public Builder(String name) {
@@ -102,8 +101,6 @@ public class ObjectMapper extends Mapper implements Cloneable {
             );
             if (!(mapper instanceof RootObjectMapper)) {
                 context.putPositionInfo(mapper, position);
-                assert position != null || mapper.mappers.values().stream().allMatch(m -> m.position == null) :
-                    "if an object's position is null, its children's positions should also be null";
             }
             return mapper;
         }
@@ -115,11 +112,6 @@ public class ObjectMapper extends Mapper implements Cloneable {
                                             Map<String, Mapper> mappers,
                                             BuilderContext context) {
             return new ObjectMapper(name, position, fullPath, dynamic, mappers, context.indexSettings());
-        }
-
-        public T position(int position) {
-            this.position = position;
-            return this.builder;
         }
     }
 

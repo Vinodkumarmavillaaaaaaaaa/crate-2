@@ -64,7 +64,10 @@ public final class ContentPath {
             sb.append(path[i]).append(DELIMITER);
         }
         sb.append(name);
-        return sb.toString();
+        String str = sb.toString();
+        return name.equals("") && (offset < index) ?
+            str.substring(0, str.length() - 1) :
+            str;
     }
 
     public int currentDepth() {

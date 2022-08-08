@@ -46,7 +46,6 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
         protected boolean hasDocValues = true;
         protected boolean indexed = true;
         protected CopyTo copyTo = CopyTo.empty();
-        protected Integer position;
         @Nullable
         protected String defaultExpression;
 
@@ -86,10 +85,6 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
 
         protected String buildFullName(BuilderContext context) {
             return context.path().pathAsText(name);
-        }
-
-        public void position(int position) {
-            this.position = position;
         }
 
         public void defaultExpression(String defaultExpression) {
