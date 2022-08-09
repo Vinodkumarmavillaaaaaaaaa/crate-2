@@ -900,6 +900,9 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
                     throw new AssertionError("duplicate column positions: " + mapping);
                 }
             }
+            if (childPosition < 0) {
+                throw new AssertionError("negative column positions: " + mapping);
+            }
             validateColumnPositions(columnProperties, takenPositions);
         }
     }
