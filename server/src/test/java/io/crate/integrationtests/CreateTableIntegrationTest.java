@@ -198,21 +198,21 @@ public class CreateTableIntegrationTest extends IntegTestCase {
                     where table_name = 't'
                     order by 2""");
         Assertions.assertThat(printedTable(response.rows())).isEqualTo(
-            """
-            ta| 1
-            tb| 2
-            tc| 3
-            tc['td']| 4
-            tc['te']| 5
-            tc['tf']| 6
-            tc['tf']['tg']| 7
-            ti| 9
-            ti['tj']| 10
-            ti['tk']| 11
-            ti['tk']['tl']| 12
-            tm| 13
-            tn| 14
-            """); // 'th' is a named index and is assigned column position 8
+             """
+             ta| 1
+             tb| 2
+             tc| 3
+             tc['td']| 4
+             tc['te']| 5
+             tc['tf']| 6
+             tc['tf']['tg']| 7
+             ti| 9
+             ti['tj']| 10
+             ti['tk']| 11
+             ti['tk']['tl']| 12
+             tm| 13
+             tn| 14
+             """); // 'th' is a named index and is assigned column position 8
 
         execute("select * from t");
         assertThat(printedTable(response.rows())).isEqualTo(

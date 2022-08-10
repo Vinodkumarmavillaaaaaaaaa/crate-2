@@ -152,17 +152,19 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         refresh();
 
         execute("select * from quotes order by id");
-        assertThat(printedTable(response.rows()), is("""
-                                                         1| Don't pañic.
-                                                         2| Would it save you a lot of time if I just gave up and went mad now?
-                                                         3| Time is an illusion. Lunchtime doubly so.
-                                                         """));
+        assertThat(printedTable(response.rows()), is(
+             """
+             1| Don't pañic.
+             2| Would it save you a lot of time if I just gave up and went mad now?
+             3| Time is an illusion. Lunchtime doubly so.
+             """));
 
         execute("select column_name, ordinal_position from information_schema.columns where table_name='quotes' order by ordinal_position");
-        assertThat(printedTable(response.rows()), is("""
-                                                         id| 1
-                                                         quote| 2
-                                                         """));
+        assertThat(printedTable(response.rows()), is(
+             """
+             id| 1
+             quote| 2
+             """));
 
     }
 
@@ -1186,14 +1188,15 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         waitForMappingUpdateOnAll("quotes", "author.surname");
 
         execute("select column_name, ordinal_position from information_schema.columns where table_name = 'quotes' order by ordinal_position");
-        assertThat(printedTable(response.rows()), is("""
-                                                         id| 1
-                                                         quote| 2
-                                                         date| 3
-                                                         author| 4
-                                                         author['name']| 5
-                                                         author['surname']| 6
-                                                         """));
+        assertThat(printedTable(response.rows()), is(
+             """
+             id| 1
+             quote| 2
+             date| 3
+             author| 4
+             author['name']| 5
+             author['surname']| 6
+             """));
 
         execute("select author['surname'] from quotes order by id");
         assertEquals(3L, response.rowCount());
@@ -1748,12 +1751,13 @@ public class PartitionedTableIntegrationTest extends IntegTestCase {
         ensureYellow();
 
         execute("select column_name, ordinal_position from information_schema.columns where table_name='t' order by ordinal_position");
-        assertThat(printedTable(response.rows()), is("""
-                                                         id| 1
-                                                         date| 2
-                                                         name| 3
-                                                         ft_name| 4
-                                                         """));
+        assertThat(printedTable(response.rows()), is(
+             """
+             id| 1
+             date| 2
+             name| 3
+             ft_name| 4
+             """));
 
         execute("select * from t");
         assertThat(Arrays.asList(response.cols()), Matchers.containsInAnyOrder("date", "ft_name", "id", "name"));

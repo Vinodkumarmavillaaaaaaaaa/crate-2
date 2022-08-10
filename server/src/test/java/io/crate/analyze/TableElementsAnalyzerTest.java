@@ -53,26 +53,28 @@ public class TableElementsAnalyzerTest extends CrateDummyClusterServiceUnitTest 
             "nested",
             null,
             null,
-            new ObjectColumnType("dynamic",
-                                 List.of(
-                                     new ColumnDefinition(
-                                         "nested2",
-                                         null,
-                                         null,
-                                         new ObjectColumnType("dynamic",
-                                                              List.of(
-                                                                  new ColumnDefinition(
-                                                                      "sub1",
-                                                                      null,
-                                                                      null,
-                                                                      new CollectionColumnType<>(
-                                                                          new ColumnType<>("integer")
-                                                                      ),
-                                                                      List.of())
-                                                              )
-                                         ),
-                                         List.of())
-                                 )
+            new ObjectColumnType(
+                "dynamic",
+                         List.of(
+                             new ColumnDefinition(
+                                 "nested2",
+                                 null,
+                                 null,
+                                 new ObjectColumnType(
+                                     "dynamic",
+                                              List.of(
+                                                  new ColumnDefinition(
+                                                      "sub1",
+                                                      null,
+                                                      null,
+                                                      new CollectionColumnType<>(
+                                                          new ColumnType<>("integer")
+                                                      ),
+                                                      List.of())
+                                              )
+                                 ),
+                                 List.of())
+                         )
             ),
             List.of());
 
@@ -104,12 +106,13 @@ public class TableElementsAnalyzerTest extends CrateDummyClusterServiceUnitTest 
     @Test
     public void test_analyze_can_calculate_position_values_when_index_columns_involved() throws IOException {
         e = SQLExecutor.builder(clusterService)
-            .addTable("""
-                          CREATE TABLE tbl (
-                            author TEXT NOT NULL,
-                            INDEX author_ft USING FULLTEXT (author) WITH (analyzer = 'standard')
-                          );
-                          """)
+            .addTable(
+              """
+              CREATE TABLE tbl (
+                author TEXT NOT NULL,
+                INDEX author_ft USING FULLTEXT (author) WITH (analyzer = 'standard')
+              );
+              """)
             .build();
         var analyzedRelation = (AnalyzedAlterTableAddColumn) e.analyze("ALTER TABLE tbl ADD COLUMN dummy text NOT NULL");
         /*

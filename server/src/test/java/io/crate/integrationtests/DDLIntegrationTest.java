@@ -462,17 +462,18 @@ public class DDLIntegrationTest extends IntegTestCase {
         execute("alter table t add column o['q']['r']['s'] int");
 
         execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't'");
-        assertThat(printedTable(response.rows()), is("""
-                                                         id| 1| integer
-                                                         name| 2| text
-                                                         o| 3| object
-                                                         o['b']| 4| integer
-                                                         o['a']| 5| object
-                                                         o['a']['b']| 6| integer
-                                                         o['q']| 7| object
-                                                         o['q']['r']| 8| object
-                                                         o['q']['r']['s']| 9| integer
-                                                         """));
+        assertThat(printedTable(response.rows()), is(
+             """
+             id| 1| integer
+             name| 2| text
+             o| 3| object
+             o['b']| 4| integer
+             o['a']| 5| object
+             o['a']['b']| 6| integer
+             o['q']| 7| object
+             o['q']['r']| 8| object
+             o['q']['r']['s']| 9| integer
+             """));
     }
 
     @Test

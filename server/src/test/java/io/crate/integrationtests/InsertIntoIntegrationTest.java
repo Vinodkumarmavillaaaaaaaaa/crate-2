@@ -1682,16 +1682,18 @@ public class InsertIntoIntegrationTest extends IntegTestCase {
         execute("refresh table t");
         execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't' order by 2");
 
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo("""
-                                                                           tb| 1| object_array
-                                                                           p| 2| integer
-                                                                           tb['t1']| 3| object_array
-                                                                           tb['t2']| 4| object
-                                                                           tb['t1']['t3']| 5| object
-                                                                           tb['t1']['t6']| 6| bigint_array
-                                                                           tb['t1']['t3']['t4']| 7| object
-                                                                           tb['t1']['t3']['t4']['t5']| 8| bigint
-                                                                           """);
+        Assertions.assertThat(printedTable(response.rows())).isEqualTo(
+            """
+            tb| 1| object_array
+            p| 2| integer
+            tb['t1']| 3| object_array
+            tb['t2']| 4| object
+            tb['t1']['t3']| 5| object
+            tb['t1']['t6']| 6| bigint_array
+            tb['t1']['t3']['t4']| 7| object
+            tb['t1']['t3']['t4']['t5']| 8| bigint
+            """
+        );
 
         execute("select * from t");
         assertThat(printedTable(response.rows()), is("[{t1=[{t3={t4={t5=1}}}, {t6=[1, 2]}]}, {t2={}}]| NULL\n"));
@@ -1711,16 +1713,18 @@ public class InsertIntoIntegrationTest extends IntegTestCase {
         execute("refresh table t");
         execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't' order by 2");
 
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo("""
-                                                                           tb| 1| object_array
-                                                                           p| 2| integer
-                                                                           tb['t1']| 3| object_array
-                                                                           tb['t2']| 4| object
-                                                                           tb['t1']['t3']| 5| object
-                                                                           tb['t1']['t6']| 6| bigint_array
-                                                                           tb['t1']['t3']['t4']| 7| object
-                                                                           tb['t1']['t3']['t4']['t5']| 8| bigint
-                                                                           """);
+        Assertions.assertThat(printedTable(response.rows())).isEqualTo(
+            """
+            tb| 1| object_array
+            p| 2| integer
+            tb['t1']| 3| object_array
+            tb['t2']| 4| object
+            tb['t1']['t3']| 5| object
+            tb['t1']['t6']| 6| bigint_array
+            tb['t1']['t3']['t4']| 7| object
+            tb['t1']['t3']['t4']['t5']| 8| bigint
+            """
+        );
 
         execute("select * from t");
         assertThat(printedTable(response.rows()), is("[{t1=[{t3={t4={t5=1}}}, {t6=[1, 2]}]}, {t2={}}]| NULL\n"));
