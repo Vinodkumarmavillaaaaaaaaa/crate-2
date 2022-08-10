@@ -70,8 +70,8 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             }
         }
 
-        public ColumnPositionResolver<Mapper> getColumnPositionResolver() {
-            return columnPositionResolver;
+        public void updateRootObjectMapperWithPositionInfo(RootObjectMapper rootObjectMapper) {
+            rootObjectMapper.updateColumnPositionResolver(this.columnPositionResolver);
         }
     }
 

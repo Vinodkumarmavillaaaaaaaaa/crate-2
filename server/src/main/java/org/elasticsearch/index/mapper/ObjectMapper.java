@@ -99,7 +99,9 @@ public class ObjectMapper extends Mapper implements Cloneable {
                 mappers,
                 context
             );
-            if (!(mapper instanceof RootObjectMapper)) {
+            if (mapper instanceof RootObjectMapper rootObjectMapper) {
+                context.updateRootObjectMapperWithPositionInfo(rootObjectMapper);
+            } else {
                 context.putPositionInfo(mapper, position);
             }
             return mapper;
