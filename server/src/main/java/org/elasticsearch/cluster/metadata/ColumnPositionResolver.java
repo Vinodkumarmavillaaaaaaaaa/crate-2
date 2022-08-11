@@ -33,10 +33,8 @@ import java.util.function.BiConsumer;
 public class ColumnPositionResolver<T> {
     // Depths of the columns are used as keys such that deeper columns take higher column positions. (parent's position < children's positions)
     private final Map<Integer, List<Column<T>>> columnsToReposition = new TreeMap<>(Comparator.naturalOrder());
-    private int maxColumnPosition = 0;
 
-    public static <T> void resolve(@Nonnull ColumnPositionResolver<T> toResolve) {
-        int maxColumnPosition = toResolve.maxColumnPosition;
+    public static <T> void resolve(@Nonnull ColumnPositionResolver<T> toResolve, int maxColumnPosition) {
         for (var o : toResolve.columnsToReposition.values()) {
             Collections.sort(o);
             for (Column<T> column : o) {
@@ -58,16 +56,8 @@ public class ColumnPositionResolver<T> {
         }
     }
 
-    public void updateMaxColumnPosition(@Nonnull Integer columnPosition) {
-        this.maxColumnPosition = Math.max(maxColumnPosition, columnPosition);
-    }
-
     public int numberOfColumnsToReposition() {
         return this.columnsToReposition.size();
-    }
-
-    public int getMaxColumnPosition() {
-        return this.maxColumnPosition;
     }
 
     private record Column<T>(String name, Integer columnOrdering, BiConsumer<T, Integer> positionUpdater, T column) implements Comparable<Column<T>> {

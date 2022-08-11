@@ -82,19 +82,9 @@ public class RootObjectMapper extends ObjectMapper {
     public RootObjectMapper merge(Mapper mergeWith) {
         RootObjectMapper newMapper = (RootObjectMapper) super.merge(mergeWith);
         if (mergeWith instanceof RootObjectMapper rootObjectMapper) {
-            rootObjectMapper.columnPositionResolver.updateMaxColumnPosition(this.columnPositionResolver.getMaxColumnPosition());
-            ColumnPositionResolver.resolve(rootObjectMapper.columnPositionResolver);
+            ColumnPositionResolver.resolve(rootObjectMapper.columnPositionResolver, this.maxColumnPosition());
         }
         return newMapper;
-    }
-
-    @Override
-    public ObjectMapper mappingUpdate(Mapper mapper) {
-        RootObjectMapper mappingUpdate = (RootObjectMapper) super.mappingUpdate(mapper);
-        // it makes sense to re-build the columnPositionResolver with respect to inner mapper changes,
-        // but it is not used, so cleared instead.
-        mappingUpdate.columnPositionResolver = new ColumnPositionResolver<>();
-        return mappingUpdate;
     }
 
     public void updateColumnPositionResolver(ColumnPositionResolver<Mapper> columnPositionResolver) {

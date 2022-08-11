@@ -65,8 +65,6 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
                                                                   mapper,
                                                                   (m, p) -> m.position = p,
                                                                   contentPath.currentDepth());
-            } else {
-                this.columnPositionResolver.updateMaxColumnPosition(position);
             }
         }
 
@@ -175,4 +173,9 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
     /** Return the merge of {@code mergeWith} into this.
      *  Both {@code this} and {@code mergeWith} will be left unmodified. */
     public abstract Mapper merge(Mapper mergeWith);
+
+    /**
+     * Returns the max of the column positions taken by itself and its children.
+     */
+    public abstract int maxColumnPosition();
 }

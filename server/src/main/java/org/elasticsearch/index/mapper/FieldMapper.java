@@ -128,6 +128,11 @@ public abstract class FieldMapper extends Mapper implements Cloneable {
     }
 
     @Override
+    public int maxColumnPosition() {
+        return (position == null) ? 0 : position;
+    }
+
+    @Override
     public String name() {
         return fieldType().name();
     }

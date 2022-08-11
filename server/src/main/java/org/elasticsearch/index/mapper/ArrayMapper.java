@@ -244,4 +244,9 @@ public class ArrayMapper extends FieldMapper implements ArrayValueMapperParser {
         throw new UnsupportedOperationException("parseCreateField not supported for " +
                                                 ArrayMapper.class.getSimpleName());
     }
+
+    @Override
+    public int maxColumnPosition() {
+        return Math.max(super.maxColumnPosition(), innerMapper.maxColumnPosition());
+    }
 }

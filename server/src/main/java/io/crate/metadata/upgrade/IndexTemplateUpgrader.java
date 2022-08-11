@@ -125,8 +125,9 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
 
     public static boolean populateColumnPositions(Map<String, Object> mapping) {
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
-        populateColumnPositions("", mapping, 1, columnPositionResolver, new HashSet<>());
-        ColumnPositionResolver.resolve(columnPositionResolver);
+        int[] maxColumnPosition = new int[]{0};
+        populateColumnPositions("", mapping, 1, columnPositionResolver, new HashSet<>(), maxColumnPosition);
+        ColumnPositionResolver.resolve(columnPositionResolver, maxColumnPosition[0]);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 
@@ -134,7 +135,8 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
                                                 Map<String, Object> mapping,
                                                 int currentDepth,
                                                 ColumnPositionResolver<Map<String, Object>> columnPositionResolver,
-                                                Set<Integer> takenPositions) {
+                                                Set<Integer> takenPositions,
+                                                int[] maxColumnPosition) {
 
         Map<String, Object> properties = Maps.get(mapping, "properties");
         if (properties == null) {
@@ -154,7 +156,7 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
                                                              currentDepth);
             } else {
                 takenPositions.add(position);
-                columnPositionResolver.updateMaxColumnPosition(position);
+                maxColumnPosition[0] = Math.max(maxColumnPosition[0], position);
             }
             childrenColumnProperties.put(name, columnProperties);
         }
@@ -164,7 +166,8 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
                                     childColumnProperties.getValue(),
                                     currentDepth + 1,
                                     columnPositionResolver,
-                                    takenPositions);
+                                    takenPositions,
+                                    maxColumnPosition);
         }
     }
 }

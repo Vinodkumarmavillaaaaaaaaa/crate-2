@@ -274,12 +274,16 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
 
     public static boolean populateColumnPositions(Map<String, Object> mapping) {
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
-        populateColumnPositions(mapping, new ContentPath(), columnPositionResolver);
-        ColumnPositionResolver.resolve(columnPositionResolver);
+        int[] maxColumnPosition = new int[]{0};
+        populateColumnPositions(mapping, new ContentPath(), columnPositionResolver, maxColumnPosition);
+        ColumnPositionResolver.resolve(columnPositionResolver, maxColumnPosition[0]);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 
-    public static void populateColumnPositions(Map<String, Object> mapping, ContentPath contentPath, ColumnPositionResolver<Map<String, Object>> columnPositionResolver) {
+    private static void populateColumnPositions(Map<String, Object> mapping,
+                                                ContentPath contentPath,
+                                                ColumnPositionResolver<Map<String, Object>> columnPositionResolver,
+                                                int[] maxColumnPosition) {
 
         Map<String, Object> properties = Maps.get(mapping, "properties");
         if (properties == null) {
@@ -299,9 +303,9 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
                                                              (cp, p) -> cp.put("position", p),
                                                              contentPath.currentDepth());
             } else {
-                columnPositionResolver.updateMaxColumnPosition(position);
+                maxColumnPosition[0] = Math.max(maxColumnPosition[0], position);
             }
-            populateColumnPositions(columnProperties, contentPath, columnPositionResolver);
+            populateColumnPositions(columnProperties, contentPath, columnPositionResolver, maxColumnPosition);
             contentPath.remove();
         }
     }

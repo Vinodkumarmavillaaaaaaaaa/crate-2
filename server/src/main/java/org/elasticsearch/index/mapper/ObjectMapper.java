@@ -303,6 +303,15 @@ public class ObjectMapper extends Mapper implements Cloneable {
     }
 
     @Override
+    public int maxColumnPosition() {
+        int maxPosition = this.position == null ? 0 : this.position;
+        for (var mapper : this) {
+            maxPosition = Math.max(maxPosition, mapper.maxColumnPosition());
+        }
+        return maxPosition;
+    }
+
+    @Override
     public ObjectMapper merge(Mapper mergeWith) {
         if (!(mergeWith instanceof ObjectMapper)) {
             throw new IllegalArgumentException("Can't merge a non object mapping [" + mergeWith.name() + "] with an object mapping [" + name() + "]");
