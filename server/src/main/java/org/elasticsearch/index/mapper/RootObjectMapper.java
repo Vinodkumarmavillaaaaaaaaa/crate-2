@@ -83,7 +83,7 @@ public class RootObjectMapper extends ObjectMapper {
         RootObjectMapper newMapper = (RootObjectMapper) super.merge(mergeWith);
         if (mergeWith instanceof RootObjectMapper rootObjectMapper) {
             rootObjectMapper.columnPositionResolver.updateMaxColumnPosition(this.columnPositionResolver.getMaxColumnPosition());
-            newMapper.columnPositionResolver = ColumnPositionResolver.resolve(rootObjectMapper.columnPositionResolver);
+            ColumnPositionResolver.resolve(rootObjectMapper.columnPositionResolver);
         }
         return newMapper;
     }

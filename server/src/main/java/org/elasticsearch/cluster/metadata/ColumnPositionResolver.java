@@ -34,7 +34,7 @@ public class ColumnPositionResolver<T> {
     private final Map<Integer, List<Column<T>>> columnsToReposition = new TreeMap<>(Comparator.naturalOrder());
     private int maxColumnPosition = 0;
 
-    public static <T> ColumnPositionResolver<T> resolve(@Nonnull ColumnPositionResolver<T> toResolve) {
+    public static <T> void resolve(@Nonnull ColumnPositionResolver<T> toResolve) {
         int maxColumnPosition = toResolve.maxColumnPosition;
         for (var o : toResolve.columnsToReposition.values()) {
             // column position calculation : by depth (ascending) first, columnOrdering (descending) second then by name third
@@ -58,10 +58,6 @@ public class ColumnPositionResolver<T> {
                 column.updatePosition(++maxColumnPosition);
             }
         }
-
-        var merged = new ColumnPositionResolver<T>();
-        merged.maxColumnPosition = maxColumnPosition;
-        return merged;
     }
 
     public void addColumnToReposition(String name, Integer columnOrdering, T column, BiConsumer<T, Integer> positionUpdater, int depth) {
