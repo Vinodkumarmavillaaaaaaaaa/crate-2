@@ -23,6 +23,7 @@ package org.elasticsearch.cluster.metadata;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -37,23 +38,7 @@ public class ColumnPositionResolver<T> {
     public static <T> void resolve(@Nonnull ColumnPositionResolver<T> toResolve) {
         int maxColumnPosition = toResolve.maxColumnPosition;
         for (var o : toResolve.columnsToReposition.values()) {
-            // column position calculation : by depth (ascending) first, columnOrdering (descending) second then by name third
-            o.sort((o1, o2) -> {
-                if (o1.columnOrdering == null && o2.columnOrdering == null) {
-                    return o1.name.compareTo(o2.name);
-                } else if (o1.columnOrdering == null) {
-                    return 1;
-                } else if (o2.columnOrdering == null) {
-                    return -1;
-                } else {
-                    int comparison = o2.columnOrdering.compareTo(o1.columnOrdering);
-                    if (comparison != 0) {
-                        return comparison;
-                    } else {
-                        return o1.name.compareTo(o2.name);
-                    }
-                }
-            });
+            Collections.sort(o);
             for (Column<T> column : o) {
                 column.updatePosition(++maxColumnPosition);
             }
@@ -85,10 +70,29 @@ public class ColumnPositionResolver<T> {
         return this.maxColumnPosition;
     }
 
-    private record Column<T>(String name, Integer columnOrdering, BiConsumer<T, Integer> positionUpdater, T column) {
+    private record Column<T>(String name, Integer columnOrdering, BiConsumer<T, Integer> positionUpdater, T column) implements Comparable<Column<T>> {
 
         public void updatePosition(Integer position) {
             this.positionUpdater.accept(column, position);
+        }
+
+        @Override
+        public int compareTo(@Nonnull Column<T> o) {
+            // column position calculation : by depth (ascending) first, columnOrdering (descending) second then by name third
+            if (this.columnOrdering == null && o.columnOrdering == null) {
+                return this.name.compareTo(o.name);
+            } else if (this.columnOrdering == null) {
+                return 1;
+            } else if (o.columnOrdering == null) {
+                return -1;
+            } else {
+                int comparison = o.columnOrdering.compareTo(this.columnOrdering);
+                if (comparison != 0) {
+                    return comparison;
+                } else {
+                    return this.name.compareTo(o.name);
+                }
+            }
         }
     }
 }
