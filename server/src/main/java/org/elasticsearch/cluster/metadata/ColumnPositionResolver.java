@@ -60,10 +60,10 @@ public class ColumnPositionResolver<T> {
         return this.columnsToReposition.size();
     }
 
-    private record Column<T>(String name, Integer columnOrdering, BiConsumer<T, Integer> positionUpdater, T column) implements Comparable<Column<T>> {
+    private record Column<T>(String name, Integer columnOrdering, BiConsumer<T, Integer> setPosition, T column) implements Comparable<Column<T>> {
 
         public void updatePosition(Integer position) {
-            this.positionUpdater.accept(column, position);
+            this.setPosition.accept(column, position);
         }
 
         @Override
