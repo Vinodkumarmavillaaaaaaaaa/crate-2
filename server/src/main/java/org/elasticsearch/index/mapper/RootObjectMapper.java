@@ -43,12 +43,12 @@ public class RootObjectMapper extends ObjectMapper {
 
         @Override
         protected ObjectMapper createMapper(String name, Integer position, String fullPath, Dynamic dynamic,
-                Map<String, Mapper> mappers, BuilderContext context) {
+                Map<String, Mapper> mappers, Settings settings) {
             return new RootObjectMapper(
                 name,
                 dynamic,
                 mappers,
-                context.indexSettings()
+                settings
             );
         }
     }
@@ -82,7 +82,7 @@ public class RootObjectMapper extends ObjectMapper {
     public RootObjectMapper merge(Mapper mergeWith) {
         RootObjectMapper newMapper = (RootObjectMapper) super.merge(mergeWith);
         if (mergeWith instanceof RootObjectMapper rootObjectMapper) {
-            ColumnPositionResolver.resolve(rootObjectMapper.columnPositionResolver, this.maxColumnPosition());
+            rootObjectMapper.columnPositionResolver.resolve(this.maxColumnPosition());
         }
         return newMapper;
     }

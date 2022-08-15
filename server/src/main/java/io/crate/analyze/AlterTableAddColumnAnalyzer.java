@@ -55,8 +55,6 @@ import io.crate.sql.tree.QualifiedName;
 
 class AlterTableAddColumnAnalyzer {
 
-    static final int COLUMN_POSITION_FOR_ADD_COLUMNS = -1; // postpone the calculations
-
     private final Schemas schemas;
     private final NodeContext nodeCtx;
 

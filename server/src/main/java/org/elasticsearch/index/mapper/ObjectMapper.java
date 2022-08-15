@@ -39,6 +39,8 @@ import org.elasticsearch.common.time.IsoLocale;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
+import javax.annotation.Nullable;
+
 
 public class ObjectMapper extends Mapper implements Cloneable {
 
@@ -97,7 +99,7 @@ public class ObjectMapper extends Mapper implements Cloneable {
                 context.path().pathAsText(name),
                 dynamic,
                 mappers,
-                context
+                context.indexSettings()
             );
             if (mapper instanceof RootObjectMapper rootObjectMapper) {
                 context.updateRootObjectMapperWithPositionInfo(rootObjectMapper);
@@ -112,8 +114,8 @@ public class ObjectMapper extends Mapper implements Cloneable {
                                             String fullPath,
                                             Dynamic dynamic,
                                             Map<String, Mapper> mappers,
-                                            BuilderContext context) {
-            return new ObjectMapper(name, position, fullPath, dynamic, mappers, context.indexSettings());
+                                            @Nullable Settings settings) {
+            return new ObjectMapper(name, position, fullPath, dynamic, mappers, settings);
         }
     }
 

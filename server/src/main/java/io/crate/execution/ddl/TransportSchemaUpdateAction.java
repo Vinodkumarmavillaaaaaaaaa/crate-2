@@ -276,7 +276,7 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
         int[] maxColumnPosition = new int[]{0};
         populateColumnPositions(mapping, new ContentPath(), columnPositionResolver, maxColumnPosition);
-        ColumnPositionResolver.resolve(columnPositionResolver, maxColumnPosition[0]);
+        columnPositionResolver.resolve(maxColumnPosition[0]);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 

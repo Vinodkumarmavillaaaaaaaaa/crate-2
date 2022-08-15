@@ -34,18 +34,18 @@ public class ColumnPositionResolver<T> {
     // Depths of the columns are used as keys such that deeper columns take higher column positions. (parent's position < children's positions)
     private final Map<Integer, List<Column<T>>> columnsToReposition = new TreeMap<>(Comparator.naturalOrder());
 
-    public static <T> void resolve(@Nonnull ColumnPositionResolver<T> toResolve, int maxColumnPosition) {
-        for (var o : toResolve.columnsToReposition.values()) {
+    public void resolve(int startingColumnPosition) {
+        for (var o : this.columnsToReposition.values()) {
             Collections.sort(o);
             for (Column<T> column : o) {
-                column.updatePosition(++maxColumnPosition);
+                column.updatePosition(++startingColumnPosition);
             }
         }
     }
 
-    public void addColumnToReposition(String name, Integer columnOrdering, T column, BiConsumer<T, Integer> positionUpdater, int depth) {
+    public void addColumnToReposition(String name, Integer columnOrdering, T column, BiConsumer<T, Integer> setPosition, int depth) {
         // columnOrdering specifies column order whereas column position specifies exact positions.
-        Column<T> c = new Column<>(name, columnOrdering, positionUpdater, column);
+        Column<T> c = new Column<>(name, columnOrdering, setPosition, column);
         List<Column<T>> columnsPerDepths = columnsToReposition.get(depth);
         if (columnsPerDepths == null) {
             List<Column<T>> columns = new ArrayList<>();

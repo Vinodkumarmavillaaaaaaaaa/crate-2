@@ -170,22 +170,17 @@ public class TableElementsAnalyzer {
                     // If it is an array, set the collection type to array, or if it's an object keep the object column
                     // policy.
                     Reference parentRef = context.tableInfo.getReference(parent.ident());
-                    int childrenCnt = 0;
                     if (parentRef != null) {
                         parent.position = parentRef.position();
                         if (parentRef.valueType().id() == ArrayType.ID) {
-                            var childrenType = ((ArrayType) parentRef.valueType()).innerType();
-                            childrenCnt = (childrenType.id() == ObjectType.ID) ? ((ObjectType) childrenType).innerTypes().size() : 0;
                             parent.collectionType(ArrayType.NAME);
                         } else {
-                            childrenCnt = ((ObjectType) parentRef.valueType()).innerTypes().size();
                             parent.objectType(parentRef.columnPolicy());
                         }
                     }
                     parent.markAsParentColumn();
-                    int position = context.currentColumnPosition > 0 ? parent.position + childrenCnt + 1 : context.currentColumnPosition;
-                    context.currentColumnPosition = position;
-                    leaf = new AnalyzedColumnDefinition<>(position, parent);
+                    assert context.currentColumnPosition < 0 : "ADD COLUMN's column positions should be negative, representing column ordering";
+                    leaf = new AnalyzedColumnDefinition<>(context.currentColumnPosition, parent);
                     leaf.name(name);
                     parent.addChild(leaf);
                     parent = leaf;

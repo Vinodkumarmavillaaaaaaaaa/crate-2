@@ -60,11 +60,11 @@ public class ObjectArrayMapper extends ObjectMapper {
                                             String fullPath,
                                             Dynamic dynamic,
                                             Map<String, Mapper> mappers,
-                                            BuilderContext context) {
+                                            Settings settings) {
             return new ObjectArrayMapper(
                 name,
-                super.createMapper(name, position, fullPath, dynamic, mappers, context),
-                context.indexSettings()
+                super.createMapper(name, position, fullPath, dynamic, mappers, settings),
+                settings
             );
         }
     }
