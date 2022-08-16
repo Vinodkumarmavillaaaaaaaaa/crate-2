@@ -36,7 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.assertj.core.api.Assertions;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -197,7 +196,7 @@ public class CreateTableIntegrationTest extends IntegTestCase {
                     from information_schema.columns
                     where table_name = 't'
                     order by 2""");
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo(
+        assertThat(printedTable(response.rows())).isEqualTo(
              """
              ta| 1
              tb| 2
@@ -215,15 +214,6 @@ public class CreateTableIntegrationTest extends IntegTestCase {
              """); // 'th' is a named index and is assigned column position 8
 
         execute("select * from t");
-        assertThat(printedTable(response.rows())).isEqualTo(
-            """
-            ta
-            tb
-            tc
-            ti
-            tm
-            tn
-            """
-        );
+        assertThat(response.cols()).isEqualTo(new String[] {"ta", "tb", "tc", "ti", "tm", "tn"});
     }
 }

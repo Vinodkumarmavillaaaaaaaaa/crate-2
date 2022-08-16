@@ -22,20 +22,14 @@
 package io.crate.metadata.upgrade;
 
 import static io.crate.metadata.upgrade.IndexTemplateUpgrader.TEMPLATE_NAME;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.elasticsearch.cluster.metadata.IndexMetadata.SETTING_NUMBER_OF_SHARDS;
 import static org.elasticsearch.common.settings.AbstractScopedSettings.ARCHIVED_SETTINGS_PREFIX;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import io.crate.Constants;
+import io.crate.metadata.PartitionName;
 import org.assertj.core.api.Assertions;
 import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
 import org.elasticsearch.common.compress.CompressedXContent;
@@ -43,8 +37,11 @@ import org.elasticsearch.common.settings.Settings;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
-import io.crate.Constants;
-import io.crate.metadata.PartitionName;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class IndexTemplateUpgraderTest {
 
@@ -154,13 +151,13 @@ public class IndexTemplateUpgraderTest {
 
     @Test
     public void test_populateColumnPositions_method_with_empty_map() {
-        assertFalse(IndexTemplateUpgrader.populateColumnPositions(Map.of()));
-        assertFalse(IndexTemplateUpgrader.populateColumnPositions(Map.of("properties", Map.of())));
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(Map.of())).isFalse();
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(Map.of("properties", Map.of()))).isFalse();
     }
 
     @Test
     public void test_populateColumnPositions_method_without_missing_columns() {
-        assertFalse(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("a", Map.of("position", 1),
                           "b", Map.of("inner",
@@ -169,7 +166,7 @@ public class IndexTemplateUpgraderTest {
                                       )
                        )
                    )
-            )));
+            ))).isFalse();
     }
 
     @Test
@@ -188,13 +185,13 @@ public class IndexTemplateUpgraderTest {
         map4.put("properties", map5);
         map5.put("d", map6);
 
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(map));
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(map)).isTrue();
         Assertions.assertThat(map2.get("position")).isEqualTo(1);
         Assertions.assertThat(map4.get("position")).isEqualTo(2);
         Assertions.assertThat(map6.get("position")).isEqualTo(3);
 
         Map<String, Object> d = new HashMap<>();
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("a", Map.of("position", 1),
                           "b", Map.of("inner",
@@ -205,7 +202,7 @@ public class IndexTemplateUpgraderTest {
                                       )
                        )
                    )
-            )));
+            ))).isTrue();
         Assertions.assertThat(d.get("position")).isEqualTo(4);
     }
 
@@ -213,7 +210,7 @@ public class IndexTemplateUpgraderTest {
     public void test_populateColumnPositions_method_with_missing_columns_that_are_same_level_are_order_by_full_path_name() {
         Map<String, Object> d = new HashMap<>();
         Map<String, Object> e = new HashMap<>();
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("a", Map.of("position", 1,
                                       "properties", Map.of(
@@ -226,14 +223,14 @@ public class IndexTemplateUpgraderTest {
                                       )
                        )
                    )
-            )));
+            ))).isTrue();
         Assertions.assertThat(e.get("position")).isEqualTo(4);
         Assertions.assertThat(d.get("position")).isEqualTo(5);
 
         // swap d and e
         d = new HashMap<>();
         e = new HashMap<>();
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("a", Map.of("position", 1,
                                       "properties", Map.of(
@@ -246,7 +243,7 @@ public class IndexTemplateUpgraderTest {
                                       )
                        )
                    )
-            )));
+            ))).isTrue();
         Assertions.assertThat(d.get("position")).isEqualTo(4);
         Assertions.assertThat(e.get("position")).isEqualTo(5);
     }
@@ -255,7 +252,7 @@ public class IndexTemplateUpgraderTest {
     public void test_populateColumnPositions_method_with_missing_columns_order_by_level() {
         Map<String, Object> d = new HashMap<>();
         Map<String, Object> f = new HashMap<>();
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("a", Map.of("position", 1,
                                       "properties", Map.of(
@@ -271,7 +268,7 @@ public class IndexTemplateUpgraderTest {
                                       )
                        )
                    )
-            )));
+            ))).isTrue();
         //check d < f
         Assertions.assertThat(d.get("position")).isEqualTo(5);
         Assertions.assertThat(f.get("position")).isEqualTo(6);
@@ -279,7 +276,7 @@ public class IndexTemplateUpgraderTest {
         // swap d and f
         d = new HashMap<>();
         f = new HashMap<>();
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("a", Map.of("position", 1,
                                       "properties", Map.of(
@@ -295,7 +292,7 @@ public class IndexTemplateUpgraderTest {
                                       )
                        )
                    )
-            )));
+            ))).isTrue();
         // f < d
         Assertions.assertThat(d.get("position")).isEqualTo(6);
         Assertions.assertThat(f.get("position")).isEqualTo(5);
@@ -312,7 +309,7 @@ public class IndexTemplateUpgraderTest {
         Map<String, Object> p3c = new HashMap<>();
         Map<String, Object> p3cc = new HashMap<>();
         Map<String, Object> p3ccc = new HashMap<>();
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(
+        assertThat(IndexTemplateUpgrader.populateColumnPositions(
             Map.of("properties",
                    Map.of("p1", Map.of("position", 3, "properties",
                                        Map.of(
@@ -334,7 +331,7 @@ public class IndexTemplateUpgraderTest {
                                        ))
                    )
             )
-        ));
+        )).isTrue();
         Assertions.assertThat(p1c.get("position")).isEqualTo(4);
         Assertions.assertThat(p1cc.get("position")).isEqualTo(5);
         Assertions.assertThat(p1ccc.get("position")).isEqualTo(6);
@@ -361,7 +358,7 @@ public class IndexTemplateUpgraderTest {
 
         Map<String, Object> map = Map.of("properties", properties);
 
-        assertTrue(IndexTemplateUpgrader.populateColumnPositions(map));
+        Assertions.assertThat(IndexTemplateUpgrader.populateColumnPositions(map)).isTrue();
         Assertions.assertThat(a.get("position")).isEqualTo(1);
         Assertions.assertThat(b.get("position")).isEqualTo(2);
         Assertions.assertThat(c.get("position")).isEqualTo(3);

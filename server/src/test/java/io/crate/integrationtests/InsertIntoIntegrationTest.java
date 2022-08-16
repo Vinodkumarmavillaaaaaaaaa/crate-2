@@ -47,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.elasticsearch.test.IntegTestCase;
-import org.assertj.core.api.Assertions;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.IsNull;
 import org.junit.Test;
@@ -1343,8 +1342,6 @@ public class InsertIntoIntegrationTest extends IntegTestCase {
         execute("insert into dyn_ts (id, ts) values (0, '2015-01-01')");
         refresh();
         waitForMappingUpdateOnAll("dyn_ts", "ts");
-        execute("select ordinal_position from information_schema.columns where table_name = 'dyn_ts' and column_name = 'ts'");
-        assertThat(response.rows()[0][0], is(2));
         execute("insert into dyn_ts (id, ts) values (1, '2015-02-01')");
         // string is not converted to timestamp
         execute("select data_type from information_schema.columns where table_name='dyn_ts' and column_name='ts'");
@@ -1666,67 +1663,5 @@ public class InsertIntoIntegrationTest extends IntegTestCase {
         assertThat(printedTable(response.rows()), is(
             "1\n"
         ));
-    }
-
-    @Test
-    public void test_insert_deep_nested_dynamically_into_partitioned_table() {
-        execute(
-            """
-                create table t (
-                    tb array(object(dynamic)),
-                    p int
-                ) partitioned by (p) with (column_policy = 'dynamic');
-                """
-        );
-        execute("insert into t (tb) values ([{t1 = [{t3 = {t4 = {t5 = 1}}},{t6 = [1,2]}]},{t2 = {}}])");
-        execute("refresh table t");
-        execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't' order by 2");
-
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo(
-            """
-            tb| 1| object_array
-            p| 2| integer
-            tb['t1']| 3| object_array
-            tb['t2']| 4| object
-            tb['t1']['t3']| 5| object
-            tb['t1']['t6']| 6| bigint_array
-            tb['t1']['t3']['t4']| 7| object
-            tb['t1']['t3']['t4']['t5']| 8| bigint
-            """
-        );
-
-        execute("select * from t");
-        assertThat(printedTable(response.rows()), is("[{t1=[{t3={t4={t5=1}}}, {t6=[1, 2]}]}, {t2={}}]| NULL\n"));
-    }
-
-    @Test
-    public void test_insert_deep_nested_dynamically_into_table() {
-        execute(
-            """
-                create table t (
-                    tb array(object(dynamic)),
-                    p int
-                ) with (column_policy = 'dynamic');
-                """
-        );
-        execute("insert into t (tb) values ([{t1 = [{t3 = {t4 = {t5 = 1}}},{t6 = [1,2]}]},{t2 = {}}])");
-        execute("refresh table t");
-        execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't' order by 2");
-
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo(
-            """
-            tb| 1| object_array
-            p| 2| integer
-            tb['t1']| 3| object_array
-            tb['t2']| 4| object
-            tb['t1']['t3']| 5| object
-            tb['t1']['t6']| 6| bigint_array
-            tb['t1']['t3']['t4']| 7| object
-            tb['t1']['t3']['t4']['t5']| 8| bigint
-            """
-        );
-
-        execute("select * from t");
-        assertThat(printedTable(response.rows()), is("[{t1=[{t3={t4={t5=1}}}, {t6=[1, 2]}]}, {t2={}}]| NULL\n"));
     }
 }

@@ -396,7 +396,7 @@ final class DocumentParser {
                 throw new StrictDynamicMappingException(mapper.fullPath(), currentFieldName);
             } else if (dynamic == ObjectMapper.Dynamic.TRUE) {
                 Mapper.Builder<?> builder = new ObjectMapper.Builder<>(currentFieldName);
-                builder.position(getPositionForDynamicField(context));
+                builder.position(getPositionEstimate(context));
                 Mapper.BuilderContext builderContext = new Mapper.BuilderContext(context.indexSettings().getSettings(), context.path());
                 objectMapper = builder.build(builderContext);
                 context.addDynamicMapper(objectMapper);
@@ -413,9 +413,11 @@ final class DocumentParser {
         }
     }
 
-    static int getPositionForDynamicField(ParseContext context) {
-        // this does not return the exact column positions but column orderings
-        // which will be used for the actual column position calculations by ColumnPositionResolver.resolve()
+    /**
+     * Returns position estimates instead of the exact positions, which will be used for the actual column position calculations
+     * by {@link org.elasticsearch.cluster.metadata.ColumnPositionResolver#updatePositions(int)}
+     */
+    static int getPositionEstimate(ParseContext context) {
         return -1 - context.getDynamicMappers().size();
     }
 
@@ -571,7 +573,7 @@ final class DocumentParser {
         }
         final Mapper.BuilderContext builderContext = new Mapper.BuilderContext(context.indexSettings().getSettings(), context.path());
         final Mapper.Builder<?> builder = createBuilderFromDynamicValue(context, token, currentFieldName);
-        builder.position(getPositionForDynamicField(context));
+        builder.position(getPositionEstimate(context));
         Mapper mapper = builder.build(builderContext);
         context.addDynamicMapper(mapper);
         parseObjectOrField(context, mapper);
@@ -654,7 +656,7 @@ final class DocumentParser {
                         throw new StrictDynamicMappingException(parent.fullPath(), paths[i]);
                     case TRUE:
                         Mapper.Builder<?> builder = new ObjectMapper.Builder<>(paths[i]);
-                        builder.position(getPositionForDynamicField(context));
+                        builder.position(getPositionEstimate(context));
                         Mapper.BuilderContext builderContext = new Mapper.BuilderContext(context.indexSettings().getSettings(),
                             context.path());
                         mapper = (ObjectMapper) builder.build(builderContext);

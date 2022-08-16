@@ -127,7 +127,7 @@ public class IndexTemplateUpgrader implements UnaryOperator<Map<String, IndexTem
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
         int[] maxColumnPosition = new int[]{0};
         populateColumnPositions("", mapping, 1, columnPositionResolver, new HashSet<>(), maxColumnPosition);
-        columnPositionResolver.resolve(maxColumnPosition[0]);
+        columnPositionResolver.updatePositions(maxColumnPosition[0]);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 

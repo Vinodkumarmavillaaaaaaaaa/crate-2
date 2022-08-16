@@ -24,7 +24,7 @@ package io.crate.integrationtests;
 import org.apache.lucene.tests.util.TestUtil;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.env.Environment;
-import org.elasticsearch.test.ESIntegTestCase;
+import org.elasticsearch.test.IntegTestCase;
 import org.junit.Test;
 
 import java.io.InputStream;
@@ -34,8 +34,8 @@ import java.nio.file.Path;
 import static io.crate.testing.TestingHelpers.printedTable;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ESIntegTestCase.ClusterScope(numDataNodes = 0, numClientNodes = 0)
-public class IndexUpgraderTest extends SQLIntegrationTestCase {
+@IntegTestCase.ClusterScope(numDataNodes = 0, numClientNodes = 0)
+public class IndexUpgraderTest extends IntegTestCase {
 
     /**
      * {@link TablesNeedUpgradeSysCheckTest#startUpNodeWithDataDir(String)}

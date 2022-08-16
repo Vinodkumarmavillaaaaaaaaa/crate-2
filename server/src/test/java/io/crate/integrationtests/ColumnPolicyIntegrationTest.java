@@ -315,9 +315,6 @@ public class ColumnPolicyIntegrationTest extends IntegTestCase {
         execute("update dynamic_table set name='Trillian', boo=true where name='Ford'");
         execute("refresh table dynamic_table");
 
-        execute("select ordinal_position from information_schema.columns where table_name = 'dynamic_table' and column_name = 'boo'");
-        assertThat(response.rows()[0][0], is(3));
-
         waitForMappingUpdateOnAll("dynamic_table", "boo");
         execute("select * from dynamic_table");
         assertThat(response.rowCount(), is(1L));

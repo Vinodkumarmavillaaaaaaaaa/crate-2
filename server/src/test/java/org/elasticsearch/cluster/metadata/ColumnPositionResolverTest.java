@@ -34,7 +34,7 @@ public class ColumnPositionResolverTest {
         ColumnPositionResolver<TestColumn> resolver = new ColumnPositionResolver<>();
         addToResolver(resolver, t1);
         addToResolver(resolver, t2);
-        resolver.resolve(0);
+        resolver.updatePositions(0);
         assertThat(t2.position).isEqualTo(1);
         assertThat(t1.position).isEqualTo(2);
     }
@@ -46,7 +46,7 @@ public class ColumnPositionResolverTest {
         ColumnPositionResolver<TestColumn> resolver = new ColumnPositionResolver<>();
         addToResolver(resolver, t1);
         addToResolver(resolver, t2);
-        resolver.resolve(0);
+        resolver.updatePositions(0);
         assertThat(t2.position).isEqualTo(1);
         assertThat(t1.position).isEqualTo(2);
     }
@@ -58,7 +58,7 @@ public class ColumnPositionResolverTest {
         ColumnPositionResolver<TestColumn> resolver = new ColumnPositionResolver<>();
         addToResolver(resolver, t1);
         addToResolver(resolver, t2);
-        resolver.resolve(0);
+        resolver.updatePositions(0);
         assertThat(t2.position).isEqualTo(1);
         assertThat(t1.position).isEqualTo(2);
     }

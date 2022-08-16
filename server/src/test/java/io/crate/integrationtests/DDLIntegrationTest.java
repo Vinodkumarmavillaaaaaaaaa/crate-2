@@ -456,24 +456,16 @@ public class DDLIntegrationTest extends IntegTestCase {
     @Test
     public void testAlterTableAddColumn() {
         execute("create table t (id int primary key) with (number_of_replicas=0)");
-        execute("refresh table t");
         execute("alter table t add column name string");
-        execute("alter table t add column o object as (b int, a object as (b int))");
-        execute("alter table t add column o['q']['r']['s'] int");
 
-        execute("select column_name, ordinal_position, data_type from information_schema.columns where table_name = 't'");
-        assertThat(printedTable(response.rows()), is(
-             """
-             id| 1| integer
-             name| 2| text
-             o| 3| object
-             o['b']| 4| integer
-             o['a']| 5| object
-             o['a']['b']| 6| integer
-             o['q']| 7| object
-             o['q']['r']| 8| object
-             o['q']['r']['s']| 9| integer
-             """));
+        execute("select data_type from information_schema.columns where " +
+                "table_name = 't' and column_name = 'name'");
+        assertThat(response.rows()[0][0], is("text"));
+
+        execute("alter table t add column o object as (age int)");
+        execute("select data_type from information_schema.columns where " +
+                "table_name = 't' and column_name = 'o'");
+        assertThat((String) response.rows()[0][0], is("object"));
     }
 
     @Test
@@ -944,11 +936,5 @@ public class DDLIntegrationTest extends IntegTestCase {
                 )
                 """.stripIndent()
         ));
-
-        execute("select column_name, ordinal_position from information_schema.columns where table_name = 'tbl' order by ordinal_position");
-        assertThat(printedTable(response.rows()), is("""
-                                                         author| 1
-                                                         dummy| 3
-                                                         """)); // author_ft took the column position 2
     }
 }

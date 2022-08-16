@@ -21,14 +21,12 @@
 
 package org.elasticsearch.cluster.metadata;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class MetadataMappingServiceTest {
 
@@ -36,10 +34,11 @@ public class MetadataMappingServiceTest {
     public void test_populateColumnPositionsImpl_method_with_empty_map() {
         Map<String, Object> map = new HashMap<>();
         MetadataMappingService.populateColumnPositionsImpl(map, map);
-        assertTrue(map.isEmpty());
+        assertThat(map).isEmpty();
         map.put("properties", new HashMap<>());
         MetadataMappingService.populateColumnPositionsImpl(map, Map.of());
         MetadataMappingService.populateColumnPositionsImpl(map, Map.of("properties", Map.of()));
+        assertThat(map).isEqualTo(Map.of("properties", Map.of()));
     }
 
     @Test
@@ -56,19 +55,16 @@ public class MetadataMappingServiceTest {
     public void test_populateColumnPositionsImpl_method_with_missing_columns_that_is_also_missing_from_template_mapping() {
         Map<String, Object> a = new HashMap<>();
         a.put("position", 1);
-        Map<String, Object> indexMapping = Map.of("properties", Map.of("a", a)); // missing column positions
-        try {
-            MetadataMappingService.populateColumnPositionsImpl(indexMapping,
-                                                               Map.of("properties",
-                                                                      Map.of("b", Map.of("position", 10)) // also missing column 'a'
-                                                               )
-            );
-        } catch (AssertionError e) {
+        Map<String, Object> indexMapping = Map.of("properties", Map.of("a", a));
+
+        assertThatThrownBy(() -> MetadataMappingService.populateColumnPositionsImpl(
+            indexMapping,
+            Map.of("properties",
+                 Map.of("b", Map.of("position", 10)) // template-mapping is missing column 'a'
+            )
+        )).isExactlyInstanceOf(AssertionError.class)
             // template mappings must contain up-to-date and correct column positions that all relevant index mappings can reference.
-            assertThat(e.getMessage()).isEqualTo("the template mapping is missing column positions");
-            return;
-        }
-        fail();
+            .hasMessage("the template mapping is missing column positions");
     }
 
     @Test
@@ -135,7 +131,6 @@ public class MetadataMappingServiceTest {
 
     @Test
     public void test_populateColumnPositionsImpl_method_overrides_duplicates() {
-
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> a = new HashMap<>();
         Map<String, Object> b = new HashMap<>();
@@ -144,10 +139,11 @@ public class MetadataMappingServiceTest {
         a.put("position", 1);
         b.put("position", 1);
 
-        MetadataMappingService.populateColumnPositionsImpl(map,
-                                                           Map.of("properties", Map.of(
-                                                               "a", Map.of("position", 3),
-                                                               "b", Map.of("position", 4))));
+        MetadataMappingService.populateColumnPositionsImpl(
+            map,
+            Map.of("properties", Map.of(
+               "a", Map.of("position", 3),
+               "b", Map.of("position", 4))));
 
         assertThat(a.get("position")).isEqualTo(3);
         assertThat(b.get("position")).isEqualTo(4);

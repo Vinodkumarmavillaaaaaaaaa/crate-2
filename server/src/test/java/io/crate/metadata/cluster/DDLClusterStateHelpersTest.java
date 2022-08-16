@@ -21,12 +21,11 @@
 
 package io.crate.metadata.cluster;
 
-import java.util.List;
-import java.util.Map;
-
+import static org.assertj.core.api.Assertions.assertThat;
+import io.crate.Constants;
+import io.crate.common.collections.MapBuilder;
 import org.elasticsearch.cluster.metadata.IndexTemplateMetadata;
 import org.elasticsearch.common.Strings;
-import io.crate.common.collections.MapBuilder;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -34,8 +33,8 @@ import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.Test;
 
-import io.crate.Constants;
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.List;
+import java.util.Map;
 
 public class DDLClusterStateHelpersTest {
 

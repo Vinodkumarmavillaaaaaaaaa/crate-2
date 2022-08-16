@@ -23,7 +23,6 @@ package io.crate.integrationtests;
 
 import static com.carrotsearch.randomizedtesting.RandomizedTest.$;
 import static com.carrotsearch.randomizedtesting.RandomizedTest.randomAsciiLettersOfLength;
-import static io.crate.testing.TestingHelpers.printedTable;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
@@ -37,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.assertj.core.api.Assertions;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
@@ -442,102 +440,5 @@ public class PartitionedTableConcurrentIntegrationTest extends IntegTestCase {
 
         // this query should never fail
         execute("select * from t1 order by x limit 50");
-    }
-
-    @Test
-    public void test_column_positions_after_concurrent_mapping_updates_on_partitioned_table() throws InterruptedException {
-        // update, insert, alter take slightly different paths to update mappings
-        execute("""
-                create table t (a int, b object as (x int)) partitioned by (a) with (number_of_replicas='0')
-                """);
-        ensureYellow();
-
-        execute("""
-                insert into t values (1, {x=1})
-                """);
-        execute("refresh table t");
-
-        execute("select * from t");
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo("""
-                                                     1| {x=1}
-                                                     """);
-
-        Thread concurrentUpdates1 = new Thread(() -> {
-            for (int i = 0; i < 5; i++) {
-                execute("update t set b['newcol" + i + "'] = 1 where b['x'] = 1");
-            }
-        });
-        Thread concurrentUpdates2 = new Thread(() -> {
-            for (int i = 10; i < 15; i++) {
-                execute("update t set b['newcol" + i + "'] = 1 where b['x'] = 1");
-            }
-        });
-        Thread concurrentUpdates3 = new Thread(() -> {
-            for (int i = 20; i < 25; i++) {
-                execute("update t set b['newcol" + i + "'] = 1 where b['x'] = 1");
-            }
-        });
-        Thread concurrentUpdates4 = new Thread(() -> {
-            for (int i = 30; i < 35; i++) {
-                execute("alter table t add column b['newcol" + i + "'] int");
-            }
-        });
-        Thread concurrentUpdates5 = new Thread(() -> {
-            for (int i = 40; i < 45; i++) {
-                execute("alter table t add column b['newcol" + i + "'] int");
-            }
-        });
-        Thread concurrentUpdates6 = new Thread(() -> {
-            for (int i = 50; i < 55; i++) {
-                execute("alter table t add column b['newcol" + i + "'] int");
-            }
-        });
-        Thread concurrentUpdates7 = new Thread(() -> {
-            for (int i = 60; i < 65; i++) {
-                execute("insert into t(b) values({newcol" + i + "=1})");
-            }
-        });
-        Thread concurrentUpdates8 = new Thread(() -> {
-            for (int i = 70; i < 75; i++) {
-                execute("insert into t(b) values({newcol" + i + "=1})");
-            }
-        });
-        Thread concurrentUpdates9 = new Thread(() -> {
-            for (int i = 80; i < 85; i++) {
-                execute("insert into t(b) values({newcol" + i + "=1})");
-            }
-        });
-
-        concurrentUpdates1.start();
-        concurrentUpdates2.start();
-        concurrentUpdates3.start();
-        concurrentUpdates4.start();
-        concurrentUpdates5.start();
-        concurrentUpdates6.start();
-        concurrentUpdates7.start();
-        concurrentUpdates8.start();
-        concurrentUpdates9.start();
-
-        concurrentUpdates1.join();
-        concurrentUpdates2.join();
-        concurrentUpdates3.join();
-        concurrentUpdates4.join();
-        concurrentUpdates5.join();
-        concurrentUpdates6.join();
-        concurrentUpdates7.join();
-        concurrentUpdates8.join();
-        concurrentUpdates9.join();
-
-        execute("select count(distinct ordinal_position), max(ordinal_position) from information_schema.columns where table_name = 't'");
-        Assertions.assertThat(response.rows()[0][0]).isEqualTo(48L);
-        Assertions.assertThat(response.rows()[0][1]).isEqualTo(48);
-
-        execute("select column_name, ordinal_position from information_schema.columns where table_name = 't' order by ordinal_position limit 3");
-        Assertions.assertThat(printedTable(response.rows())).isEqualTo(
-            """
-            a| 1
-            b| 2
-            b['x']| 3
-            """);
     }
 }

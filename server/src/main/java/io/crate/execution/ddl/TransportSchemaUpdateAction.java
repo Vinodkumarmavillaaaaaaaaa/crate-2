@@ -235,13 +235,7 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
                     } else if (updateAllowed(key, sourceValue, updateValue)) {
                         source.put(key, updateValue);
                     } else if (!isUpdateIgnored(path) && !Objects.equals(sourceValue, updateValue)) {
-                        if (key.equals("position") && updateValue instanceof Integer intValue && intValue < 0) {
-                            // ex) copy-from to a partitioned table results in multiple template mapping updates.
-                            // If the copy-from stmt dynamically adds columns, its column positions will be negative first
-                            // representing that they are not yet fully calculated then positive representing the exact column positions.
-                            // So, if the sourceValue already contains something, it should be positive
-                            // meaning that the exact column positions have been calculated and updated the mapping.
-                            // Therefore, if updateValue is different(and negative) from the sourceValue, simply ignore it.
+                        if (ignorePositionUpdate(key, updateValue)) {
                             continue;
                         }
                         String fqKey = String.join(".", path) + '.' + key;
@@ -253,6 +247,20 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
                 source.put(key, updateValue);
             }
         }
+    }
+
+    /**
+     *  ex) copy-from to a partitioned table results in multiple template mapping updates.
+     *  If the copy-from stmt dynamically adds columns, its column positions will be negative first
+     *  representing that they are not yet fully calculated then positive representing the exact column positions.
+     *  So, if the sourceValue already contains something, it should be positive
+     *  meaning that the exact column positions have been calculated and updated the mapping.
+     *  Therefore, if updateValue is different(and negative) from the sourceValue, simply ignore it.
+     *
+     *  The negative values for copy-from originate from {@link org.elasticsearch.index.mapper.DocumentParser.getPositionEstimate()}
+     */
+    private static boolean ignorePositionUpdate(String key, Object updateValue) {
+        return key.equals("position") && updateValue instanceof Integer intValue && intValue < 0;
     }
 
     private static boolean isUpdateIgnored(List<String> path) {
@@ -276,7 +284,7 @@ public class TransportSchemaUpdateAction extends TransportMasterNodeAction<Schem
         var columnPositionResolver = new ColumnPositionResolver<Map<String, Object>>();
         int[] maxColumnPosition = new int[]{0};
         populateColumnPositions(mapping, new ContentPath(), columnPositionResolver, maxColumnPosition);
-        columnPositionResolver.resolve(maxColumnPosition[0]);
+        columnPositionResolver.updatePositions(maxColumnPosition[0]);
         return columnPositionResolver.numberOfColumnsToReposition() > 0;
     }
 

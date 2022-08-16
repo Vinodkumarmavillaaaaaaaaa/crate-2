@@ -63,6 +63,12 @@ public class TableElementsAnalyzer {
         return analyze(tableElements, relationName, tableInfo, true, isAddColumn);
     }
 
+    /**
+     *
+     * @param isAddColumn When set to true, column positions of the analyzed table elements will contain negative column estimates
+     *                    representing the ordering of the columns to be added dynamically. The estimates will be assigned by {@link ColumnDefinitionContext#increaseCurrentPosition()}
+     *                    then re-calculated to be the exact column positions by {@link org.elasticsearch.cluster.metadata.ColumnPositionResolver}
+     */
     public static <T> AnalyzedTableElements<T> analyze(List<TableElement<T>> tableElements,
                                                        RelationName relationName,
                                                        @Nullable TableInfo tableInfo,

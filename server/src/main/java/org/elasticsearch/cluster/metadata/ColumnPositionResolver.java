@@ -34,7 +34,7 @@ public class ColumnPositionResolver<T> {
     // Depths of the columns are used as keys such that deeper columns take higher column positions. (parent's position < children's positions)
     private final Map<Integer, List<Column<T>>> columnsToReposition = new TreeMap<>(Comparator.naturalOrder());
 
-    public void resolve(int startingColumnPosition) {
+    public void updatePositions(int startingColumnPosition) {
         for (var o : this.columnsToReposition.values()) {
             Collections.sort(o);
             for (Column<T> column : o) {
