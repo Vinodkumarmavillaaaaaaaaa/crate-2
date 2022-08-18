@@ -28,7 +28,6 @@ import java.util.Locale;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.Version;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexMetadata;
@@ -172,8 +171,7 @@ public class DocTableInfoFactory {
                 indexTemplateMetadata.getMappings().get(Constants.DEFAULT_MAPPING_TYPE).toString());
 
             Settings.Builder settingsBuilder = Settings.builder()
-                .put(indexTemplateMetadata.settings())
-                .put(IndexMetadata.SETTING_VERSION_CREATED, Version.CURRENT);
+                .put(indexTemplateMetadata.settings());
 
             Settings settings = settingsBuilder.build();
             builder.settings(settings);
