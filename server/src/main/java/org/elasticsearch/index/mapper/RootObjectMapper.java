@@ -42,7 +42,7 @@ public class RootObjectMapper extends ObjectMapper {
         }
 
         @Override
-        protected ObjectMapper createMapper(String name, Integer position, String fullPath, Dynamic dynamic,
+        protected ObjectMapper createMapper(String name, int position, String fullPath, Dynamic dynamic,
                 Map<String, Mapper> mappers, Settings settings) {
             return new RootObjectMapper(
                 name,
@@ -75,7 +75,7 @@ public class RootObjectMapper extends ObjectMapper {
                      Dynamic dynamic,
                      Map<String, Mapper> mappers,
                      Settings settings) {
-        super(name, null, name, dynamic, mappers, settings);
+        super(name, NOT_TO_BE_POSITIONED, name, dynamic, mappers, settings);
     }
 
     @Override

@@ -56,7 +56,7 @@ public class ObjectArrayMapper extends ObjectMapper {
 
         @Override
         protected ObjectMapper createMapper(String name,
-                                            Integer position,
+                                            int position,
                                             String fullPath,
                                             Dynamic dynamic,
                                             Map<String, Mapper> mappers,

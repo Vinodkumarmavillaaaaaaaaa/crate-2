@@ -22,6 +22,7 @@
 package org.elasticsearch.cluster.metadata;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,7 +44,7 @@ public class ColumnPositionResolver<T> {
         }
     }
 
-    public void addColumnToReposition(String name, Integer columnOrdering, T column, BiConsumer<T, Integer> setPosition, int depth) {
+    public void addColumnToReposition(String name, @Nullable Integer columnOrdering, T column, BiConsumer<T, Integer> setPosition, int depth) {
         // columnOrdering specifies column order whereas column position specifies exact positions.
         Column<T> c = new Column<>(name, columnOrdering, setPosition, column);
         List<Column<T>> columnsPerDepths = columnsToReposition.get(depth);

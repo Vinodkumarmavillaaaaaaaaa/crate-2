@@ -362,7 +362,7 @@ public class GeoShapeFieldMapper extends FieldMapper {
     }
 
     public GeoShapeFieldMapper(String simpleName,
-                               Integer position,
+                               int position,
                                @Nullable String defaultExpression,
                                FieldType fieldType,
                                MappedFieldType mappedFieldType,
@@ -452,11 +452,9 @@ public class GeoShapeFieldMapper extends FieldMapper {
         if (includeDefaults || fieldType().tree().equals(Defaults.TREE) == false) {
             builder.field(Names.TREE, fieldType().tree());
         }
-
-        if (position != null) {
+        if (position != NOT_TO_BE_POSITIONED) {
             builder.field("position", position);
         }
-
         if (fieldType().treeLevels() != 0) {
             builder.field(Names.TREE_LEVELS, fieldType().treeLevels());
         } else if (includeDefaults && fieldType().precisionInMeters() == -1) { // defaults only make sense if precision is not specified

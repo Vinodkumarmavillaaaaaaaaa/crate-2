@@ -110,7 +110,7 @@ public class ObjectMapper extends Mapper implements Cloneable {
         }
 
         protected ObjectMapper createMapper(String name,
-                                            Integer position,
+                                            int position,
                                             String fullPath,
                                             Dynamic dynamic,
                                             Map<String, Mapper> mappers,
@@ -231,7 +231,8 @@ public class ObjectMapper extends Mapper implements Cloneable {
 
     private volatile CopyOnWriteHashMap<String, Mapper> mappers;
 
-    ObjectMapper(String name, Integer position,
+    ObjectMapper(String name,
+                 int position,
                  String fullPath,
                  Dynamic dynamic,
                  Map<String, Mapper> mappers,
@@ -306,7 +307,7 @@ public class ObjectMapper extends Mapper implements Cloneable {
 
     @Override
     public int maxColumnPosition() {
-        int maxPosition = this.position == null ? 0 : this.position;
+        int maxPosition = this.position;
         for (var mapper : this) {
             maxPosition = Math.max(maxPosition, mapper.maxColumnPosition());
         }
@@ -344,7 +345,7 @@ public class ObjectMapper extends Mapper implements Cloneable {
         }
     }
 
-    protected Integer position() {
+    protected int position() {
         return position;
     }
 
@@ -359,7 +360,7 @@ public class ObjectMapper extends Mapper implements Cloneable {
         if (mappers.isEmpty() && custom == null) { // only write the object content type if there are no properties, otherwise, it is automatically detected
             builder.field("type", CONTENT_TYPE);
         }
-        if (position != null) {
+        if (position != NOT_TO_BE_POSITIONED) {
             builder.field("position", position);
         }
         if (dynamic != null) {

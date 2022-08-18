@@ -93,7 +93,7 @@ public class GeoPointFieldMapper extends FieldMapper implements ArrayValueMapper
     }
 
     public GeoPointFieldMapper(String simpleName,
-                               Integer position,
+                               int position,
                                @Nullable String defaultExpression,
                                FieldType fieldType,
                                MappedFieldType defaultFieldType,

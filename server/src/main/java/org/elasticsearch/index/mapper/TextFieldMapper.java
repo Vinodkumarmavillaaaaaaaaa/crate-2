@@ -196,7 +196,7 @@ public class TextFieldMapper extends FieldMapper {
     }
 
     protected TextFieldMapper(String simpleName,
-                              Integer position,
+                              int position,
                               String defaultExpression,
                               FieldType fieldType,
                               TextFieldType mappedFieldType,

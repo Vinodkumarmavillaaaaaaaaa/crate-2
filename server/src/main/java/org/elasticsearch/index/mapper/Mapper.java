@@ -33,6 +33,8 @@ import java.util.function.Supplier;
 
 public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
+    public static final int NOT_TO_BE_POSITIONED = 0;
+
     public static class BuilderContext {
         private final Settings indexSettings;
         private final ContentPath contentPath;
@@ -53,12 +55,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             return this.indexSettings;
         }
 
-        public Version indexCreatedVersion() {
-            return Version.indexCreated(indexSettings);
-        }
-
-        public void putPositionInfo(Mapper mapper, Integer position) {
-            assert position != null : "position should not be null";
+        public void putPositionInfo(Mapper mapper, int position) {
             if (position < 0) {
                 this.columnPositionResolver.addColumnToReposition(mapper.name(),
                                                                   position,
@@ -83,7 +80,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
             this.name = name;
         }
 
-        protected Integer position;
+        protected int position;
 
         public String name() {
             return this.name;
@@ -92,7 +89,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
         /** Returns a newly built mapper. */
         public abstract Mapper build(BuilderContext context);
 
-        public void position(Integer position) {
+        public void position(int position) {
             this.position = position;
         }
     }
@@ -149,7 +146,7 @@ public abstract class Mapper implements ToXContentFragment, Iterable<Mapper> {
 
     private final String simpleName;
 
-    protected Integer position;
+    protected int position;
 
     public Mapper(String simpleName) {
         Objects.requireNonNull(simpleName);

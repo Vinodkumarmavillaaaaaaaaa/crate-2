@@ -198,7 +198,7 @@ public final class KeywordFieldMapper extends FieldMapper {
 
 
     private KeywordFieldMapper(String simpleName,
-                               Integer position,
+                               int position,
                                @Nullable String defaultExpression,
                                FieldType fieldType,
                                MappedFieldType mappedFieldType,
