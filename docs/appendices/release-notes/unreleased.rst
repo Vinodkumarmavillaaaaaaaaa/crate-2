@@ -94,6 +94,11 @@ Fixes
 .. stable branch. You can add a version label (`v/X.Y`) to the pull request for
 .. an automated mergify backport.
 
+- Fixed an issue causing ``IndexOutOfBoundsException`` when applying
+  aggregations on literals, i.e.::
+
+    SELECT SUM(10) FROM test HAVING COUNT(1) > 0
+
 - Fixed an issue, preventing users from defining a constraint on a generated
   column, when creating a table or when adding a generated column, i.e.::
 

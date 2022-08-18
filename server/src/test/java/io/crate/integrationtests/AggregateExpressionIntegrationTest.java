@@ -238,4 +238,31 @@ public class AggregateExpressionIntegrationTest extends IntegTestCase {
                       "b\n" +
                       "c\n"));
     }
+
+    @Test
+    public void test_aggregations_on_literal() {
+        execute("CREATE TABLE test (s STRING)");
+        execute("INSERT INTO test VALUES ('foo'),('bar'),('crate')");
+        refresh();
+
+        // Split the COUNT aggregations in a different query, since the code path used is
+        // different for the other aggregations when COUNT is present in the same query.
+        execute(
+            """
+                SELECT COUNT(3), COUNT(DISTINCT 5)
+                FROM test HAVING COUNT(1) > 0
+            """);
+        assertThat(printedTable(response.rows()),
+                   is("3| 1\n"));
+
+        execute(
+            """
+                SELECT SUM(10), AVG(50), AVG(DISTINCT 60), MIN(100), MAX(200),
+                    ARBITRARY(300), ARRAY_AGG('db'), GEOMETRIC_MEAN(400), STDDEV(500), STRING_AGG('DB', ','),
+                    PERCENTILE(600, 0.8), VARIANCE(700)
+                FROM test HAVING COUNT(1) > 0
+            """);
+        assertThat(printedTable(response.rows()),
+                   is("30| 50.0| 60.0| 100| 200| 300| [db, db, db]| 399.9999999999999| 0.0| DB,DB,DB| 600.0| 0.0\n"));
+    }
 }
